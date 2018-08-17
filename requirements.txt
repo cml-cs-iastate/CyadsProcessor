@@ -1,0 +1,11 @@
+django==2.0.6
+google-cloud-pubsub
+mysqlclient
+python-dateutil
+google-api-python-client>=1.6.4
+requests>=2.18.4
+youtube-dl>=2017.11.15
+beautifulsoup4>=4.6.0
+tenacity>=4.7
+lxml >=4.1.1
+html5lib>=1.0b10
