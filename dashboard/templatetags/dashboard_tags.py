@@ -18,3 +18,12 @@ def convert_second_to_hour(sec):
     h = int(sec/3600)
     m = int((sec % 3600)/60)
     return str(h)+" hours "+ str(m) + " minutes"
+
+
+@register.filter('get_total_ads')
+def get_total_ads(queryset, batch_id):
+    batch_info = queryset.filter(batch_id=batch_id)
+    if len(batch_info) > 0:
+        return batch_info[0].get('total_ads')
+    else:
+        return 0

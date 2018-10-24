@@ -24,6 +24,7 @@
         <table class="table table-striped">
             <thead>
                 <tr>
+                    <th scope="col" >Batch Id</th>
                     <th scope="col">Start Date/Time</th>
                     <th scope="col">Total Bots</th>
                     <th scope="col">Location</th>
@@ -36,6 +37,7 @@
             <tbody>
                 {% for batch in running_batch %}
                     <tr>
+                        <td scope="row">{{batch.id}}</td>
                         <td scope="row">{{batch.start_timestamp|timestamp_to_time}}</td>
                         <td scope="row">{{batch.total_bots}}</td>
                         <td scope="row">{{batch.location.state_name}}</td>
@@ -82,11 +84,12 @@
 
 <div class="row">
 
-      <div class="col-sm-7">
+      <div class="col-sm-12">
       <H3 style="text-align:center;" class="bg-info"> Completed Batches </H3>
 
         <table class="table table-striped">
             <tr>
+                <th scope="col" >Batch Id</th>
                 <th scope="col">Start Date/Time</th>
                 <th scope="col">Complete Time</th>
                 <th scope="col">Total Running Time</th>
@@ -100,11 +103,15 @@
                 <th scope="col" >Total Ads Found</th>
                 <th scope="col" >Synced</th>
                 <th scope="col" >Processed</th>
+                <th scope="col" >Total Youtube Ads</th>
+                <th scope="col" >Total External Ads</th>
+
 
 
             </tr>
             {% for batch in completed_batch %}
                 <tr>
+                    <td scope="row">{{batch.id}}</td>
                     <td scope="row">{{batch.start_timestamp|timestamp_to_time}}</td>
                     <td scope="row">{{batch.completed_timestamp|timestamp_to_time}}</td>
                     <td scope="row">{{batch.time_taken|format_second}}</td>
@@ -118,6 +125,9 @@
                     <td scope="row">{{batch.total_ads_found}}</td>
                     <td scope="row">{{batch.synced}}</td>
                     <td scope="row">{{batch.processed}}</td>
+                    <td scope="row">{{youtube_ads|get_total_ads:batch.id}}</td>
+                    <td scope="row">{{external_ads|get_total_ads:batch.id}}</td>
+
                 </tr>
             {% endfor %}
         </table>

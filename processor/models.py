@@ -124,7 +124,7 @@ class Channels(models.Model):
 
 class Videos(models.Model):
     url = models.TextField()
-    title = models.CharField(max_length=255, default='')
+    title = models.TextField(default='')
     category = models.ForeignKey(Categories, on_delete=models.CASCADE)
     channel = models.ForeignKey(Channels, on_delete=models.CASCADE)
     description = models.TextField(default='')

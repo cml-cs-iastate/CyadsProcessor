@@ -1,7 +1,7 @@
 from django.db.models import Sum, Count
 from django.shortcuts import render
 
-from processor.models import Batch, Constants
+from processor.models import Batch, Constants, Ad_Found_WatchLog
 
 
 def index(request):
@@ -12,7 +12,12 @@ def index(request):
     location_stats = location_stats.annotate(total_batches=Count('id'),
                                              total_ads=Sum('total_ads_found'),
                                              total_requests=Sum('total_requests')).order_by('-total_batches')
+    youtube_ads = Ad_Found_WatchLog.objects.values('batch_id').filter(ad_source='youtube').annotate(total_ads=Count('batch_id'))
+    external_ads = Ad_Found_WatchLog.objects.values('batch_id').filter(ad_source='external').annotate(total_ads=Count('batch_id'))
+
     return render(request,'index.html', {'running_batch': running_batch,
                                          'completed_batch': completed_batch,
-                                         'location_stats': location_stats}
+                                         'location_stats': location_stats,
+                                         'youtube_ads': youtube_ads,
+                                         'external_ads': external_ads}
                   )
