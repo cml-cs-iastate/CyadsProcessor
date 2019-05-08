@@ -108,7 +108,7 @@ DATABASE=cyads_processor \
 ALLOWED_HOST=127.0.0.1 \
 GOOGLE_PROJECT_ID=cyads-203819 \
 DATABASE_PASSWORD= \
-DATABASE_USER=root \
+DATABASE_USER=root 
 
 Finally Run the following command.
 
@@ -120,10 +120,10 @@ python manage.py runserver 8000
 To build the image and push the image into the docker hub, use following command:
 
 
-docker build -t cyads_processor .
-docker image ls
-tag <image id of the latest found from above command> <docker hub user>/cyads_processor:<version>
-docker push <username>/cyads_processor
+docker build -t cyads_processor . \
+docker image ls \
+tag <image id of the latest found from above command> <docker hub user>/cyads_processor:<version> \
+docker push <username>/cyads_processor 
 
 
 # Running the processor on local machine using docker
