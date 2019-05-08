@@ -29,7 +29,7 @@ class BatchSubscriber:
 
         #future.result()
         self.logger.info("=======================================================")
-        self.logger.info("=     S U B S C R I B E R  1.5                        =")
+        self.logger.info("=     S U B S C R I B E R  1.6                        =")
         self.logger.info("=                                                     =")
         self.logger.info("=         S T A R T E D                               =")
         self.logger.info("=                                                     =")
