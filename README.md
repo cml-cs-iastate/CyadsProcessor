@@ -36,7 +36,7 @@ database.
 
 Example payload of the events that are received in the topic.
 
-#Batch Started
+# Batch Started
 {
   "event": "batch_started",
   "bots_started": 90,
@@ -49,7 +49,7 @@ Example payload of the events that are received in the topic.
   "video_list_size": 20
 }
 
-#Batch Completed
+# Batch Completed
 
 {
   "hostname": "765a89b91f33",
@@ -65,7 +65,7 @@ Example payload of the events that are received in the topic.
 }
   
   
-#Batch Synced
+# Batch Synced
 
 {
  "event": "batch_synced",
@@ -90,4 +90,4 @@ Example payload of the events that are received in the topic.
 }
 
 
-#Running the processor
+# Running the processor
