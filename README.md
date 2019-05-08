@@ -165,9 +165,9 @@ sudo docker run -d -p 80:8000 \
 -e DATABASE_HOST=db.misc.iastate.edu \
 -e DATABASE_USER=root \
 -e DATABASE_PASSWORD=\<'password'> \
--e ALLOWED_HOST=<ip of the server where the app is running> \
--e GOOGLE_KEY=<Google Api Key> \
--e DUMP_PATH=<path where synced files are saved> \
+-e ALLOWED_HOST=\<ip of the server where the app is running> \
+-e GOOGLE_KEY=\<Google Api Key> \
+-e DUMP_PATH=\<path where synced files are saved> \
 --mount type=bind,source=/home/me/dumps,target=/opt/dumps \
 --mount type=bind,source=/home/me/.key,target=/opt/.key \
 --mount type=bind,source=/home/me/cyads_processor_logs,target=/opt/CyadsProcessor/logs \<docker hub user>/cyads_processor:\<version>
