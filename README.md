@@ -95,13 +95,13 @@ Example payload of the events that are received in the topic.
 To run the processor, we need to set some environment variables at first:
 
 TOPIC_SUBSCRIPTION_NAME=dev \
-GOOGLE_KEY=<replace with google api key> \
+GOOGLE_KEY=\<replace with google api key> \
 DATABASE_HOST= localhost \
 SECRET_KEY=sko9&g@@kn4+k$\=xp8khbdvxdil6!@tekk!@lr_!qtmjb-$&xe \
-dump_path=<path where files from the bots are saved> \
+dump_path=\<path where files from the bots are saved> \
 GOOGLE_TOPIC=development \
 DEBUG=True \
-GOOGLE_APPLICATION_CREDENTIALS=<Googles credentials.json file for the account with topic> \
+GOOGLE_APPLICATION_CREDENTIALS=\<Googles credentials.json file for the account with topic> \
 DJANGO_SETTINGS_MODULE=CyadsProcessor.settings \
 PYTHONUNBUFFERED=1 \
 DATABASE=cyads_processor \
@@ -122,7 +122,7 @@ To build the image and push the image into the docker hub, use following command
 
 docker build -t cyads_processor . \
 docker image ls \
-tag <image id of the latest found from above command> <docker hub user>/cyads_processor:<version> \
+tag \<image id of the latest found from above command> \<docker hub user>/cyads_processor:\<version> \
 docker push <username>/cyads_processor 
 
 
@@ -143,11 +143,11 @@ docker run --net="host" -p 80:8000 \
 -e DATABASE_USER=root \
 -e DATABASE_PASSWORD='root' \
 -e ALLOWED_HOST=localhost \
--e GOOGLE_KEY=<Google Api Key> \
+-e GOOGLE_KEY=\<Google Api Key> \
 -e DUMP_PATH=/opt/dumps/ \
---mount type=bind,source=<path where synced files are saved>,target=/opt/dumps \
---mount type=bind,source=<path where credential.json file is saved>=/opt/.key \
---mount type=bind,source=<path where logs will be saved>,target=/opt/CyadsProcessor/logs <dockerhub user>/cyads_processor:<version>
+--mount type=bind,source=\<path where synced files are saved>,target=/opt/dumps \
+--mount type=bind,source=\<path where credential.json file is saved>=/opt/.key \
+--mount type=bind,source=\<path where logs will be saved>,target=/opt/CyadsProcessor/logs \<dockerhub user>/cyads_processor:\<version>
 
 
 # Running the processor on server
@@ -158,19 +158,19 @@ sudo docker run -d -p 80:8000 \
 -e TOPIC_SUBSCRIPTION_NAME=cyads_processor \
 -e GOOGLE_TOPIC=batch_production \
 -e GOOGLE_PROJECT_ID=cyads-203819 \
--e GOOGLE_APPLICATION_CREDENTIALS=/opt/.key/<credentials from google coud>.json \
+-e GOOGLE_APPLICATION_CREDENTIALS=/opt/.key/\<credentials from google coud>.json \
 -e SECRET_KEY=asdadada65656asd65a65asdaasdasdasdadasdasdasdas9755 \
 -e DEBUG=False \
 -e DATABASE=cyads_processor \
 -e DATABASE_HOST=db.misc.iastate.edu \
 -e DATABASE_USER=root \
--e DATABASE_PASSWORD=<'password'> \
+-e DATABASE_PASSWORD=\<'password'> \
 -e ALLOWED_HOST=<ip of the server where the app is running> \
 -e GOOGLE_KEY=<Google Api Key> \
 -e DUMP_PATH=<path where synced files are saved> \
 --mount type=bind,source=/home/me/dumps,target=/opt/dumps \
 --mount type=bind,source=/home/me/.key,target=/opt/.key \
---mount type=bind,source=/home/me/cyads_processor_logs,target=/opt/CyadsProcessor/logs <docker hub user>/cyads_processor:<version>
+--mount type=bind,source=/home/me/cyads_processor_logs,target=/opt/CyadsProcessor/logs \<docker hub user>/cyads_processor:\<version>
 
 
 
