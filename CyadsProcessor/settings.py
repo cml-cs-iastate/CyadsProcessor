@@ -22,16 +22,16 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')
 
-ALLOWED_HOSTS = [os.getenv('ALLOWED_HOST')]
+ALLOWED_HOSTS = ["127.0.0.1","localhost", "cyads.misc.iastate.edu"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'downloader.apps.DownloaderConfig',
     'processor.apps.ProcessorConfig',
     'messaging.apps.MessagingConfig',
     'dashboard.apps.DashboardConfig',
@@ -84,7 +84,7 @@ DATABASES = {
         'USER': os.getenv('DATABASE_USER'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': '3306',
+        'PORT': os.getenv('DATABASE_PORT', '3306'),
     }
 }
 
@@ -165,6 +165,21 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'downloader': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        }
 
     },
 }
+
+# celery
+BROKER_HOST = os.environ["BROKER_HOST"]
+BROKER_PASSWORD = os.environ["BROKER_PASSWORD"]
+BROKER_DB = "0"
+CELERY_BROKER_URL = f'redis://:{BROKER_PASSWORD}@{BROKER_HOST}:6379/{BROKER_DB}'
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'

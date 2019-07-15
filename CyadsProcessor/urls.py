@@ -18,13 +18,19 @@ from django.contrib import admin
 from django.urls import path, include
 
 from messaging.subscribers.batch_subscriber import BatchSubscriber
+from downloader.download import DownloadProcessor
+import downloader
+from downloader import views
 
 urlpatterns = [
     path('', include('dashboard.urls')),
     path('admin/', admin.site.urls),
+    path('download/', downloader.views.download, name="downloader")
 ]
+
 
 subscriber = BatchSubscriber(os.getenv("GOOGLE_PROJECT_ID"),
                                      os.getenv("GOOGLE_TOPIC"),
                                      os.getenv("TOPIC_SUBSCRIPTION_NAME"))
+
 subscriber.subscribe_topic()
