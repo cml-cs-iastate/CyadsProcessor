@@ -1,4 +1,5 @@
 from django.db import models
+from enum import Enum
 
 
 class Constants:
@@ -122,6 +123,25 @@ class Channels(models.Model):
     description = models.CharField(max_length=255, default='')
 
 
+class CheckStatus(Enum):
+    NOT_CHECKED = 0
+    FOUND = 1
+    MISSING = 2
+    ERROR = 3
+
+
+class CollectionType(Enum):
+    CYADS = "CyAds"
+    GOOGLETREPORT = "GoogleTReport"
+
+
+class AdFile(models.Model):
+
+    id = models.AutoField(db_column="adFile_ID", primary_key=True)
+    ad_filepath = models.TextField(null=True)
+    collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType])
+
+
 class Videos(models.Model):
     url = models.TextField()
     title = models.TextField(default='')
@@ -131,6 +151,10 @@ class Videos(models.Model):
     keywords = models.TextField(default='')
     watched_as_ad = models.IntegerField(default=0)
     watched_as_video = models.IntegerField(default=0)
+    AdFile_ID = models.ForeignKey(db_column="AdFile_ID", to=AdFile, on_delete=models.SET_NULL, null=True)
+    checked = models.BooleanField(null=False, default=False)
+    time_checked = models.DateTimeField(null=True, auto_now=True)
+    check_status = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CheckStatus], default=CheckStatus.NOT_CHECKED.value)
 
 
 class Ad_Found_WatchLog(models.Model):
@@ -144,16 +168,6 @@ class Ad_Found_WatchLog(models.Model):
     ad_duration = models.IntegerField(default=0)
     ad_skip_duration = models.IntegerField(default=0)
     ad_system = models.CharField(max_length=255, default='')
-
-
-# class Ads(models.Model):
-#     watch_log = models.ForeignKey(AdFoundWatchLog, on_delete=models.CASCADE)
-#     video = models.ForeignKey(Videos, on_delete=models.CASCADE)
-#     source = models.CharField(max_length=50,default='youtube')
-#     ad_duration = models.IntegerField(default=0)
-#     skip_duration = models.IntegerField(default=0)
-#     system = models.CharField(max_length=255,default='')
-
 
 
 
