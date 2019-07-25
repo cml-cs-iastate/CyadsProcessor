@@ -137,7 +137,7 @@ class CollectionType(Enum):
 
 class AdFile(models.Model):
 
-    id = models.AutoField(db_column="adFile_ID", primary_key=True)
+    id = models.AutoField(db_column="AdFile_ID", primary_key=True)
     ad_filepath = models.TextField(null=True)
     collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType])
 

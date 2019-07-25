@@ -20,7 +20,6 @@ COPY requirements.txt /opt/CyadsProcessor/requirements.txt
 RUN pip3 install --no-cache-dir -r /opt/CyadsProcessor/requirements.txt
 COPY . /opt/CyadsProcessor
 WORKDIR /opt/CyadsProcessor
-RUN touch /opt/.key
 
 
 
