@@ -1,3 +1,4 @@
+from __future__ import annotations
 import glob
 import logging
 
@@ -8,6 +9,76 @@ from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, 
 from processor.models import Locations, UsLocations
 from processor.vast import Parser
 from processor.video_metadata import VideoMetadata
+
+
+import pathlib
+from pathlib import Path
+
+from dataclasses import dataclass
+
+
+@dataclass
+class DumpPath:
+    # Root path of data dir
+    base_path: Path
+    location: str
+    host_hostname: str
+    container_hostname: str
+    time_started: int
+
+    @staticmethod
+    def from_batch(base_path: Path, batch: Batch) -> DumpPath:
+        return DumpPath(base_path=base_path,
+                        location=batch.location,
+                        host_hostname=batch.server_hostname,
+                        container_hostname=batch.server_container,
+                        time_started=batch.start_timestamp,
+                        )
+
+    def to_path(self) -> Path:
+        """Converts the DumpPath into a traversable path on the filesystem"""
+        return (
+            self.base_path
+                .joinpath(self.location)
+                .joinpath(f"{self.host_hostname}#{self.container_hostname}")
+                .joinpath(str(self.time_started))
+        )
+
+@dataclass
+class FullAdPath:
+    """Specific file of ad info"""
+    dump_dir_info: DumpPath
+    bot_name: str
+    attempt: int
+    request_timestamp: int
+    video_watched: str
+    ext: str
+    file_path: Path
+
+    @staticmethod
+    def from_dump_path_and_file(dump_path: DumpPath, file_path: Path) -> FullAdPath:
+        (bot_name,
+        attempt,
+        request_timestamp,
+        video_watched) = file_path.stem.split("#")
+        ext = file_path.suffix
+
+        return FullAdPath(dump_dir_info=dump_path,
+                          bot_name=bot_name,
+                          attempt=attempt,
+                          request_timestamp=request_timestamp,
+                          ext=ext,
+                          file_path=file_path)
+
+
+
+
+class AdFile:
+    def __init__(self, filename: pathlib.Path):
+        (self.bot_name,
+        self.try_num,
+        self.ad_seen_at,
+        self.video_watched) = filename.stem.split("#")
 
 
 class BatchProcessor:
@@ -104,7 +175,7 @@ class BatchProcessor:
             batch.save()
             if created:
                 self.process_new_batch(batch)
-                batch.processed = 1
+                batch.processed = True
                 batch.save()
             else:
                 self.logger.info("Batch is already processed. -- deleting all the data and reprocessing again")
@@ -120,47 +191,68 @@ class BatchProcessor:
                                                        state_symbol=UsLocations().get_state_abb(location))
         return loc
 
-    def process_new_batch(self,batch: Batch):
-        dump_path = self.dump_path
-        dump_path += batch.location.state_name + '/'
-        dump_path += batch.server_hostname + '#'
-        dump_path += batch.server_container + '/'
-        dump_path += str(batch.start_timestamp) + '/'
-        if not os.path.isdir(dump_path):
+    def process_new_batch(self, batch: Batch):
+        dump_path: DumpPath = DumpPath.from_batch(base_path=self.dump_path, batch=batch)
+        if not dump_path.to_path().is_dir():
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing ' + dump_path)
         self.save_video_information(dump_path)
         self.save_ad_information(dump_path)
         self.save_watchlog_information(dump_path, batch)
 
-    def save_watchlog_information(self, dump_path, batch: Batch):
-        videos = glob.glob(dump_path + '/Bot*.xml')
-        for video in videos:
-            try:
-                parsed_ad = Parser(video)
-                video_ad = Videos.objects.filter(url=parsed_ad.video_id)
-                video_ad = video_ad[0]
-                if len(parsed_ad.video_id) == 11:
-                    source = 'youtube'
-                else:
-                    source = 'external'
+    def determine_ad_format_version(self, dump_path: DumpPath) -> int:
 
-                parsed_file = self.parse_video_pattern(video.replace(dump_path, ''))
-                vid = Videos.objects.filter(url=parsed_file['video_id'])
-                vid = vid[0]
-                bot = self.save_bots(parsed_file['bot_name'])
-                attempt = parsed_file['try']
-                request_timestamp = parsed_file['request_timestamp']
-                wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch, video_watched=vid, attempt=attempt,
-                                                                      request_timestamp=request_timestamp, bot=bot,
-                                                                      ad_video=video_ad)
-                wl.ad_source = source
-                wl.ad_duration = parsed_ad.duration
-                wl.ad_skip_duration = parsed_ad.skip_offset
-                wl.ad_system = parsed_ad.ad_system
-                wl.save()
-            except Exception as e:
-                self.logger.info("Cannot parse the vast file. No Ad information was found")
+        # Is it version 2+?
+        try:
+            with dump_path.to_path().joinpath("ad_format_version").open("r") as f:
+                version = int(f.read())
+                return version
+        except FileNotFoundError:
+            # version 1 had no `ad_format_version` to indicate versioning
+            return 1
+
+
+    def save_watchlog_information(self, dump_path: DumpPath, batch: Batch):
+        ad_format_version: int = self.determine_ad_format_version(dump_path)
+        if ad_format_version == 1:
+            videos = glob.glob(dump_path.to_path().joinpath('Bot*.xml'))
+            for video in videos:
+                try:
+                    parsed_ad = Parser(video)
+                    video_ad = Videos.objects.filter(url=parsed_ad.video_id)
+                    video_ad = video_ad[0]
+                    if len(parsed_ad.video_id) == 11:
+                        source = 'youtube'
+                    else:
+                        source = 'external'
+
+                    parsed_file = self.parse_video_pattern(video.replace(dump_path, ''))
+                    vid = Videos.objects.filter(url=parsed_file['video_id'])
+                    vid = vid[0]
+                    bot = self.save_bots(parsed_file['bot_name'])
+                    attempt = parsed_file['try']
+                    request_timestamp = parsed_file['request_timestamp']
+                    wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch, video_watched=vid, attempt=attempt,
+                                                                          request_timestamp=request_timestamp, bot=bot,
+                                                                          ad_video=video_ad)
+                    wl.ad_source = source
+                    wl.ad_duration = parsed_ad.duration
+                    wl.ad_skip_duration = parsed_ad.skip_offset
+                    wl.ad_system = parsed_ad.ad_system
+                    wl.save()
+                except Exception as e:
+                    self.logger.info("Cannot parse the vast file. No Ad information was found")
+        elif ad_format_version == 2:
+            self.logger.error("Version 2 parsing not impleented for ad format parsing")
+        elif ad_format_version == 3:
+            videos = dump_path.to_path().glob("Bot*.txt")
+            for video in videos:
+                view_path: FullAdPath = FullAdPath.from_dump_path_and_file(dump_path, video)
+                ad_caught: str = view_path.file_path.open("r").read()
+
+            wl = Ad_Found_WatchLog()
+        else:
+            self.logger.error(f"Future/unexpected ad format version not implemented: {ad_format_version}")
 
     def save_ad_information(self, dump_path):
         videos = glob.glob(dump_path + '/Bot*.xml')
