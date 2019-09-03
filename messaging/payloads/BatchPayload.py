@@ -56,10 +56,11 @@ class BatchStarted:
         self.host_hostname: str = host_hostname
         self.external_ip: str = external_ip
         self.location: str = location
-        self.timestamp = timestamp
         self.video_list_size = video_list_size
-        if self.timestamp is None:
+        if timestamp is None:
             self.timestamp: int = utc_timestamp_seconds()
+        else:
+            self.timestamp: int = int(timestamp)
         if not isinstance(self.timestamp, numbers.Integral):
             raise ValueError(f"`timestamp` passed wasn't an int: was `{type(self.timestamp)}`")
 
@@ -70,7 +71,7 @@ class BatchStarted:
     def from_json(msg: str) -> 'BatchStarted':
         """Returns a BatchStarted from a trusted json BatchStarted message"""
         data: dict = json.loads(msg)
-        event: str = data.get("event")
+        event: Optional[str] = data.get("event")
         if event is None:
             raise KeyError("invalid msg, no event type")
         if event != BotEvents.BATCH_STARTED.value:
@@ -209,7 +210,7 @@ class BatchSyncComplete:
 
 class BatchSyncErrMsg:
     def __init__(self, returncode: int, stdout: str, stderr: str):
-        self.returncode: str = returncode
+        self.returncode: int = returncode
         self.stdout: str = stdout
         self.stderr: str = stderr
 
