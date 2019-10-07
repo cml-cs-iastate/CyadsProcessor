@@ -5,7 +5,7 @@ import logging
 
 import os
 from django.core.exceptions import ObjectDoesNotExist
-from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
+from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchCompletionStatus, BatchSynced, BatchSyncComplete
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels
 from processor.models import Locations, UsLocations
 from processor.vast import Parser
@@ -18,6 +18,8 @@ from pathlib import Path
 from dataclasses import dataclass
 
 import itertools
+
+from django.db.models import QuerySet
 
 
 def chunked_iterable(iterable, size):
@@ -123,6 +125,35 @@ class BatchProcessor:
         elif self.event == BotEvents.BATCH_SYNCED.value:
             batch_data = BatchSynced.from_json(batch_data)
             self.process_batch_synced(batch_data)
+        elif self.event == BotEvents.PROCESS.value:
+            self.process_all_unprocessed_but_synced()
+
+
+    def process_all_unprocessed_but_synced(self):
+        unprocessed_batches: QuerySet[Batch] = Batch.objects.filter(synced=True, processed=False)
+        for unprocessed in unprocessed_batches:
+            try:
+                b = unprocessed
+                completion_msg: BatchCompleted = BatchCompleted(ads_found=b.total_ads_found,
+                                                                bots_started=b.total_bots,
+                                                                external_ip=b.external_ip,
+                                                                host_hostname=b.server_hostname,
+                                                                hostname=b.server_container,
+                                                                location=b.location__state_name,
+                                                                requests=b.total_requests,
+                                                                run_id=b.start_timestamp,
+                                                                timestamp=b.completed_timestamp,
+                                                                status=BatchCompletionStatus.COMPLETE,
+                                                                video_list_size=b.video_list_size,
+                                                                )
+                # Anything that is marked as synced, is assumed synced without errors
+                batch_synced: BatchSynced = BatchSynced(batch_info=completion_msg, sync_result=BatchSyncComplete())
+                # Process the synced batch
+                self.process_batch_synced(batch_synced)
+            except Exception as e:
+                self.logger.exception(f"error processing redone batch: batch_id: {b.id}")
+                continue
+
 
     def process_batch_started(self, batch_data):
         from processor.models import Batch
@@ -231,8 +262,7 @@ class BatchProcessor:
         # Is it version 2+?
         try:
             with dump_path.to_path().joinpath("ad_format_version").open("r") as f:
-                version = int(f.read())
-                return version
+                return int(f.read())
         except FileNotFoundError:
             # version 1 had no `ad_format_version` to indicate versioning
             return 1

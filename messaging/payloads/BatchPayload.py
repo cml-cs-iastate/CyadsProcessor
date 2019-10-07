@@ -33,6 +33,8 @@ class BotEvents(str, Enum):
     BATCH_STARTED = "batch_started"
     BATCH_COMPLETED = "batch_completed"
     BATCH_SYNCED = "batch_synced"
+    # Process all unprocessed batches which are synced
+    PROCESS = "process"
 
 
 class BatchStarted:
@@ -285,5 +287,7 @@ class BatchPayload:
             return BotEvents.BATCH_STARTED.value
         elif event == BotEvents.BATCH_SYNCED.value:
             return BotEvents.BATCH_SYNCED.value
+        elif event == BotEvents.PROCESS.value:
+            return BotEvents.PROCESS.value
         else:
             raise ValueError("invalid msg, no event type")
