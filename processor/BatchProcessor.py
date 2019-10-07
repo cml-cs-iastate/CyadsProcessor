@@ -295,21 +295,27 @@ class BatchProcessor:
         vid_id: str
         times_seen: int
         for vid_id, times_seen in viewed_videos.items():
+            # Do we already have the video info?
             try:
-                # Do we already have the video info?
                 vid: Videos = Videos.objects.get(url=vid_id)
-                # If so, update existing counts
-                if is_ad:
-                    vid.watched_as_ad = vid.watched_as_ad + times_seen
-                else:
-                    vid.watched_as_video = vid.watched_as_video + times_seen
-                # Save our new count of times seen
-                vid.save()
-
             except Videos.DoesNotExist:
                 # We don't have the video info yet
                 # Lookup later
                 not_viewed[vid_id] = times_seen
+            except Videos.MultipleObjectsReturned:
+                # Workaround for multiple entries for the same url. There should only be one!
+
+                # Use the first of the duplicates
+                vids: QuerySet[Videos] = Videos.objects.filter(url=vid_id)
+                vid = vids[0]
+
+            # If the video info is already in db, update existing counts
+            if is_ad:
+                vid.watched_as_ad = vid.watched_as_ad + times_seen
+            else:
+                vid.watched_as_video = vid.watched_as_video + times_seen
+            # Save our new count of times seen
+            vid.save()
 
         # Can only get info 50 videos at a time from YouTube data API
         for chunk in chunked(not_viewed.keys(), n=50):
@@ -329,7 +335,7 @@ class BatchProcessor:
                 vid.description = str(metadata.description).encode('utf-8')
                 vid.title = str(metadata.title).encode('utf-8')
 
-                # Use yt id as key to lookup times seen
+                # Use youtube video id as key to lookup total times seen in batch
                 times_viewed = not_viewed[metadata.id]
                 if is_ad:
                     vid.watched_as_ad = vid.watched_as_ad + times_viewed
