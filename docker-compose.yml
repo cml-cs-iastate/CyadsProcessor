@@ -29,14 +29,27 @@ services:
             - GOOGLE_APPLICATION_CREDENTIALS=/opt/.key
             - SECRET_KEY=asdas 
             - DEBUG=False
+            - DUMP_PATH=/media
+            - GOOGLE_KEY=<api_key_here>
+
         ports:
             - 8000:8000
         # Not done yet
         depends_on:
             - celery_worker
         volumes:
-            - ${AD_ARCHIVE_FILESTORE_DIR}:/opt/CyadsProcessor/ads
-            - ${GOOGLE_APPLICATION_CREDENTIALS}:/opt/.key
+            - type: bind
+              source: /home/me/dumps
+              target: /media
+            - type: bind
+              source: ${AD_ARCHIVE_FILESTORE_DIR}
+              target: /opt/CyadsProcessor/ads
+            - type: bind
+              source: ${GOOGLE_APPLICATION_CREDENTIALS}
+              target: /opt/.key
+            - type: bind
+              source: /home/me/cyads_processor_logs
+              target: /opt/CyadsProcessor/logs
         restart: always
         read_only: true
 

@@ -53,7 +53,7 @@ class DumpPath:
         """Converts the DumpPath into a traversable path on the filesystem"""
         return (
             self.base_path
-                .joinpath(self.location)
+                .joinpath(self.location.state_name)
                 .joinpath(f"{self.host_hostname}#{self.container_hostname}")
                 .joinpath(str(self.time_started))
         )
@@ -103,7 +103,7 @@ class BatchProcessor:
     def __init__(self, event):
         self.event = event
         self.api_key = os.getenv('GOOGLE_KEY')
-        self.dump_path = os.getenv('DUMP_PATH')
+        self.dump_path: str = os.getenv('DUMP_PATH')
 
     def reset_database_connection(self):
         from django import db
@@ -203,7 +203,7 @@ class BatchProcessor:
             self.logger.exception(str(e))
             raise e
 
-    def process_batch_synced(self, batch_data):
+    def process_batch_synced(self, batch_data: BatchSynced):
         batch_info = batch_data.batch_info
         try:
             loc = self.get_location_info(batch_info.location)
@@ -240,7 +240,7 @@ class BatchProcessor:
         return loc
 
     def process_new_batch(self, batch: Batch):
-        dump_path: DumpPath = DumpPath.from_batch(base_path=self.dump_path, batch=batch)
+        dump_path: DumpPath = DumpPath.from_batch(base_path=Path(self.dump_path), batch=batch)
         if not dump_path.to_path().is_dir():
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing: ', dump_path.to_path().as_posix())
