@@ -11,3 +11,4 @@ lxml >=4.1.1
 html5lib>=1.0b10
 gunicorn==19.9.0
 celery[redis,auth,msgpack]==4.3.0
+more-itertools==7.2.0

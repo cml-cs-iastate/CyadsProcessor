@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Dict, DefaultDict
 import glob
+from collections import defaultdict
 import logging
+
+from more_itertools import chunked
 
 import os
 from django.core.exceptions import ObjectDoesNotExist
@@ -273,25 +276,65 @@ class BatchProcessor:
 
     def save_video_metadata(self, video_list: List[str], is_ad=False):
         """Save the video metadata of the video the bot requested"""
-        # Can only get info about 50 videos at a time from YouTube data API
-        for chunk in chunked_iterable(video_list, size=50):
+
+        # Only need to lookup video once. Increase by overall views by bot
+        # Reduces queries to YouTube data API
+
+        # all videos + ads watched
+        viewed_videos: DefaultDict[str, int] = defaultdict(int)
+
+        # videos/ads no info on yet
+        not_viewed: DefaultDict[str, int] = defaultdict(int)
+
+        for video in video_list:
+            # store video_id and times seen for later
+            # This creates a set of videos as well
+            viewed_videos[video] += 1
+        print(viewed_videos)
+
+        vid_id: str
+        times_seen: int
+        for vid_id, times_seen in viewed_videos.items():
+            try:
+                # Do we already have the video info?
+                vid: Videos = Videos.objects.get(url=vid_id)
+                # If so, update existing counts
+                if is_ad:
+                    vid.watched_as_ad = vid.watched_as_ad + times_seen
+                else:
+                    vid.watched_as_video = vid.watched_as_video + times_seen
+                # Save our new count of times seen
+                vid.save()
+
+            except Videos.DoesNotExist:
+                # We don't have the video info yet
+                # Lookup later
+                not_viewed[vid_id] = times_seen
+
+        # Can only get info 50 videos at a time from YouTube data API
+        for chunk in chunked(not_viewed.keys(), n=50):
+
             chunk = list(chunk)
             all_metadata = VideoMetadata(chunk, self.api_key)
             for idx, metadata in enumerate(all_metadata):
-                print(idx)
-                print(metadata.category_name)
-                print(metadata.id)
+                print(f"idx: {idx}, vid_cat: {metadata.category_name}, vid_id: {metadata.id}")
                 cat = self.save_categories(metadata.category_id,metadata.category_name)
                 channel = self.save_channel(metadata.channel_id, metadata.channel_title)
+
+                # Create the video entry since it doesn't exist
                 vid, created = Videos.objects.get_or_create(url=metadata.id,
                                                             category=cat, channel=channel)
+
                 vid.keywords = str(metadata.keywords).encode('utf-8')
                 vid.description = str(metadata.description).encode('utf-8')
                 vid.title = str(metadata.title).encode('utf-8')
+
+                # Use yt id as key to lookup times seen
+                times_viewed = not_viewed[metadata.id]
                 if is_ad:
-                    vid.watched_as_ad = vid.watched_as_ad + 1
+                    vid.watched_as_ad = vid.watched_as_ad + times_viewed
                 else:
-                    vid.watched_as_video = vid.watched_as_video + 1
+                    vid.watched_as_video = vid.watched_as_video + viewed_videos[metadata.id]
                 vid.save()
 
     def save_video_information_v1(self, dump_path: DumpPath):
