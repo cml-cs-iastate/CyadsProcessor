@@ -130,6 +130,7 @@ class BatchProcessor:
 
 
     def process_all_unprocessed_but_synced(self):
+        failed = False
         unprocessed_batches: QuerySet[Batch] = Batch.objects.filter(synced=True, processed=False)
         for unprocessed in unprocessed_batches:
             try:
@@ -139,7 +140,7 @@ class BatchProcessor:
                                                                 external_ip=b.external_ip,
                                                                 host_hostname=b.server_hostname,
                                                                 hostname=b.server_container,
-                                                                location=b.location__state_name,
+                                                                location=b.location.state_name,
                                                                 requests=b.total_requests,
                                                                 run_id=b.start_timestamp,
                                                                 timestamp=b.completed_timestamp,
@@ -152,7 +153,10 @@ class BatchProcessor:
                 self.process_batch_synced(batch_synced)
             except Exception as e:
                 self.logger.exception(f"error processing redone batch: batch_id: {b.id}")
+                failed = True
                 continue
+        if failed:
+            raise Exception("processing a batch failed with process pubsub")
 
 
     def process_batch_started(self, batch_data):

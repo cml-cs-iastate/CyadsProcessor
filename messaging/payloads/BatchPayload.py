@@ -290,4 +290,4 @@ class BatchPayload:
         elif event == BotEvents.PROCESS.value:
             return BotEvents.PROCESS.value
         else:
-            raise ValueError("invalid msg, no event type")
+            raise ValueError(f"invalid msg, no event type: {event}")
