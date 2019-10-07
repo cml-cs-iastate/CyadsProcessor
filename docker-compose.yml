@@ -1,0 +1,59 @@
+version: "3.6"
+
+services: 
+    processor:
+        build: .
+        image: testcyads/cyads_processor:1.8.0
+        environment: &env
+            # Allowed hosts for cyads ad processor
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+            # Database name for cyads ad info
+            - DATABASE=cyads_processor
+            # Host where cyads db is hosted
+            - DATABASE_HOST=localhost
+            # Username to access cyads db
+            - DATABASE_USER=root
+            # Password for cyads db
+            - DATABASE_PASSWORD=root
+            # Broker host for redis (used to download videos)
+            - BROKER_HOST=${BROKER_HOST}
+            # Broker host password
+            - BROKER_PASSWORD=${BROKER_PASSWORD}
+            - DJANGO_SETTINGS_MODULE=CyadsProcessor.settings
+            # pubsub topic to put messages into. Used for signaling batches to sync and process
+            - GOOGLE_TOPIC=development
+            # pubsub topic to listen on for batch completion/sync/process messages
+            - TOPIC_SUBSCRIPTION_NAME=dev
+            - PYTHONUNBUFFERED=1
+            - GOOGLE_PROJECT_ID=cyads-203819
+            - GOOGLE_APPLICATION_CREDENTIALS=/opt/.key
+            - SECRET_KEY=asdas 
+            - DEBUG=False
+        ports:
+            - 8000:8000
+        # Not done yet
+        depends_on:
+            - celery_worker
+        volumes:
+            - ${AD_ARCHIVE_FILESTORE_DIR}:/opt/CyadsProcessor/ads
+            - ${GOOGLE_APPLICATION_CREDENTIALS}:/opt/.key
+        restart: always
+        read_only: true
+
+    celery_worker:
+        command: "celery -A CyadsProcessor worker -l info -O fair"
+        image: testcyads/cyads_processor:1.7
+        hostname: celery_worker
+        environment: *env
+        healthcheck:
+            test: ["CMD", "celery", "inspect", "ping", "-A", "tasks.add", "-d", "celery@celery_worker"]
+        restart: always
+        volumes:
+            - ${GOOGLE_APPLICATION_CREDENTIALS}:/opt/.key
+
+
+
+        # Todo: Netowrk ports expose for processor(8000)
+        # Volume mount for ad archive storage of video files
+        # Setup celery image with healthcheck on processor
+
