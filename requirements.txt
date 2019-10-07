@@ -1,10 +1,10 @@
-django==2.2.3
+django==2.2.6
 google-cloud-pubsub
 mysqlclient
 python-dateutil
-google-api-python-client>=1.6.4
+google-api-python-client>=1.7.11
 requests>=2.22
-youtube-dl==2019.7.2
+youtube-dl==2019.9.28
 beautifulsoup4>=4.6.0
 tenacity>=4.7
 lxml >=4.1.1
