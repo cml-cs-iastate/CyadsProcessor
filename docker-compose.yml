@@ -3,7 +3,7 @@ version: "3.6"
 services: 
     processor:
         build: .
-        image: testcyads/cyads_processor:1.8.0
+        image: testcyads/cyads_processor:1.8.6
         environment: &env
             # Allowed hosts for cyads ad processor
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
