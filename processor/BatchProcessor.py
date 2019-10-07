@@ -229,9 +229,9 @@ class BatchProcessor:
                 batch.processed = True
                 batch.save()
             else:
-                self.logger.info("Batch is already processed. -- deleting all the data and reprocessing again")
-                batch.delete()
-                self.process_batch_synced(batch_data)
+                self.logger.info(f"Batch {} is already processed. Implement override to reprocess", batch.id)
+                #batch.delete()
+                #self.process_batch_synced(batch_data)
         except Exception as e:
             self.logger.error("Error While saving batch synced message into the database")
             self.logger.exception(str(e))
