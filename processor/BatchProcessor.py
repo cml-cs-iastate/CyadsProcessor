@@ -229,7 +229,7 @@ class BatchProcessor:
                 batch.processed = True
                 batch.save()
             else:
-                self.logger.info(f"Batch {} is already processed. Implement override to reprocess", batch.id)
+                self.logger.info(f"Batch {batch.id} is already processed. Implement override to reprocess")
                 #batch.delete()
                 #self.process_batch_synced(batch_data)
         except Exception as e:
