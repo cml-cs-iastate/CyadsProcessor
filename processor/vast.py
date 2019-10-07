@@ -3,14 +3,14 @@ import urllib.parse
 
 from youtube_dl.extractor.youtube import YoutubeIE, ExtractorError
 
-from typing import TextIO, Union
+from typing import TextIO, Union, Any
+import os
 from io import TextIOWrapper
 
 
 class Parser:
 
-
-    def __init__(self, xml: Union[str, TextIOWrapper]):
+    def __init__(self, xml: Union[str, TextIOWrapper, 'os.PathLike[Any]']):
         """Parses a vast 3.0 xml file
         :param xml: vast xml to parse
 

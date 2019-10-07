@@ -22,10 +22,6 @@ COPY . /opt/CyadsProcessor
 WORKDIR /opt/CyadsProcessor
 
 
-
-
-EXPOSE 8000
-
 RUN chmod +x /opt/CyadsProcessor/startup.sh
 
 CMD ["/opt/CyadsProcessor/startup.sh"]
