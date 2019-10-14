@@ -13,7 +13,7 @@ from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, 
 from processor.models import Locations, UsLocations
 from processor.vast import Parser
 from processor.video_metadata import VideoMetadata
-
+from django.core.exceptions import MultipleObjectsReturned
 
 import pathlib
 from pathlib import Path
@@ -210,10 +210,28 @@ class BatchProcessor:
         batch_info = batch_data.batch_info
         try:
             loc = self.get_location_info(batch_info.location)
-            batch, created = Batch.objects.get_or_create(start_timestamp=batch_info.run_id,
+            try:
+                batch, created = Batch.objects.get_or_create(start_timestamp=batch_info.run_id,
                                                          server_hostname=batch_info.host_hostname,
                                                          server_container=batch_info.hostname,
                                                          location=loc)
+            except MultipleObjectsReturned:
+                # Get all duplicates
+                batches = Batch.objects.filter(start_timestamp=batch_info.run_id,
+                                                         server_hostname=batch_info.host_hostname,
+                                                         server_container=batch_info.hostname,
+                                                         location=loc)
+
+                #ERROR: Queryset is not an iterator
+                # Keep the first
+                batch = next(batches.iterator())
+
+                # Delete the rest
+                batch_rest: Batch
+                for batch_rest in batches:
+                    batch_rest.delete()
+                created = False
+
             batch.completed_timestamp = batch_info.timestamp
             batch.status = Constants.BATCH_COMPLETED
             batch.time_taken = batch.completed_timestamp - batch.start_timestamp
@@ -224,16 +242,26 @@ class BatchProcessor:
             batch.total_bots = batch_info.bots_started
             batch.video_list_size = batch_info.video_list_size
             batch.save()
-            if created:
-                self.process_new_batch(batch)
-                batch.processed = True
-                batch.save()
-            else:
-                self.logger.info(f"Batch {} is already processed. Implement override to reprocess", batch.id)
-                #batch.delete()
-                #self.process_batch_synced(batch_data)
+
+            # Set processed to false to mark (if not already) as unprocessed
+            batch.processed = False
+            # Preserve the Batch info, but delete all Watchlog entries associated with it.
+            watchlogs: QuerySet[Ad_Found_WatchLog] = Ad_Found_WatchLog.objects.filter(batch_id=batch.id)
+            for watchlog in watchlogs:
+                watchlog.delete()
+
+            # Reprocess the batch.
+            self.process_new_batch(batch)
+            batch.processed = True
+            batch.save()
+
+            # Reset
+            # Deletes all existing watchlogs (does not delete video info) pertaining ot a batch.
+            # I assume this is to update the batch_id pertaining to each video view for each bot.
+            #self.logger.info(f"Batch {batch.id} is already processed. Deleting batch and associated Watchlog entries to reprocess")
+            #batch.delete()
         except Exception as e:
-            self.logger.error("Error While saving batch synced message into the database")
+            self.logger.error(f"Error While saving batch synced message into the database")
             self.logger.exception(str(e))
             raise e
 
@@ -295,21 +323,31 @@ class BatchProcessor:
         vid_id: str
         times_seen: int
         for vid_id, times_seen in viewed_videos.items():
+            # Do we already have the video info?
             try:
-                # Do we already have the video info?
                 vid: Videos = Videos.objects.get(url=vid_id)
-                # If so, update existing counts
-                if is_ad:
-                    vid.watched_as_ad = vid.watched_as_ad + times_seen
-                else:
-                    vid.watched_as_video = vid.watched_as_video + times_seen
-                # Save our new count of times seen
-                vid.save()
-
+                # If the video info is already in db, update existing counts
             except Videos.DoesNotExist:
                 # We don't have the video info yet
                 # Lookup later
                 not_viewed[vid_id] = times_seen
+                continue
+            except Videos.MultipleObjectsReturned:
+                # Workaround for multiple entries for the same url. There should only be one!
+
+                # Use the first of the duplicates
+                vids: QuerySet[Videos] = Videos.objects.filter(url=vid_id)
+                vid = vids[0]
+                if is_ad:
+                    vid.watched_as_ad = vid.watched_as_ad + times_seen
+                else:
+                    vid.watched_as_video = vid.watched_as_video + times_seen
+            # Save our new count of times seen
+            if is_ad:
+                vid.watched_as_ad = vid.watched_as_ad + times_seen
+            else:
+                vid.watched_as_video = vid.watched_as_video + times_seen
+            vid.save()
 
         # Can only get info 50 videos at a time from YouTube data API
         for chunk in chunked(not_viewed.keys(), n=50):
@@ -329,7 +367,7 @@ class BatchProcessor:
                 vid.description = str(metadata.description).encode('utf-8')
                 vid.title = str(metadata.title).encode('utf-8')
 
-                # Use yt id as key to lookup times seen
+                # Use youtube video id as key to lookup total times seen in batch
                 times_viewed = not_viewed[metadata.id]
                 if is_ad:
                     vid.watched_as_ad = vid.watched_as_ad + times_viewed
@@ -355,8 +393,8 @@ class BatchProcessor:
                     source = 'external'
 
                 # Get the db id of the video id
-                ad_video: Videos = Videos.objects.get(url=parsed_ad.video_id)
-                vid: Videos = Videos.objects.get(url=FullAdPath.video_watched)
+                ad_video: Videos = Videos.objects.get(url=parsed_ad.video_id).first()
+                vid: Videos = Videos.objects.get(url=FullAdPath.video_watched).first()
                 bot = self.save_bots(FullAdPath.bot_name)
                 wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch, video_watched=vid,
                                                                       attempt=FullAdPath.attempt,
@@ -448,24 +486,37 @@ class BatchProcessor:
             with view_path.file_path.open("r") as f:
                 video_ad = f.read()
 
+            # Lookup bot name id
+            bot_id = self.save_bots(view_path.bot_name)
             # Lookup db id of vid id
-            ad_seen_id = Videos.objects.filter(url=video_ad)
-            video_watched_id = Videos.objects.filter(url=view_path.video_watched)
+            # use first until dupes removed
+            ad_seen_id = Videos.objects.filter(url=video_ad).first()
+
+            video_watched_id = Videos.objects.filter(url=view_path.video_watched).first()
             wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch,
                                                                   video_watched=video_watched_id,
                                                                   attempt=view_path.attempt,
                                                                   request_timestamp=view_path.request_timestamp,
-                                                                  bot=view_path.bot_name,
+                                                                  bot=bot_id,
                                                                   ad_video=ad_seen_id)
             wl.save()
 
     def save_channel(self, channel_id: str, name: str) -> Channels:
-        ch, created = Channels.objects.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
-        return ch
+        try:
+            ch, created = Channels.objects.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
+            return ch
+        except MultipleObjectsReturned:
+            # Use first
+            return Channels.objects.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
 
     def save_categories(self, cat_id: int, name: str) -> Categories:
-        cat, created = Categories.objects.get_or_create(cat_id=cat_id, name=str(name).encode('utf-8'))
-        return cat
+        try:
+            cat, created = Categories.objects.get_or_create(cat_id=cat_id, name=str(name).encode('utf-8'))
+            return cat
+        except MultipleObjectsReturned:
+            # Return first
+            return Categories.objects.filter(cat_id=cat_id, name=str(name).encode('utf-8')).first()
+
 
     def save_bots(self, name: str) -> Bots:
         bot, created = Bots.objects.get_or_create(name=name)
