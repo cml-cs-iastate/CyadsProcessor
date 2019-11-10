@@ -1,16 +1,29 @@
+from __future__ import annotations
+
+from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from enum import Enum
 
+from messaging.payloads.BatchPayload import BatchCompletionStatus, BatchSyncComplete
+from .BatchProcessor import BatchSynced, BatchCompleted
+
+# Magic constants for db models
+MISSING_ID = -1
+MISSING_NAME = "missing"
+"""Using throughout models which don't allow null to indicate missing"""
+
+EXTERNAL_ID = 0
+EXTERNAL_NAME = "external"
+"""Using throughout models which don't allow null to indicate external"""
+
 
 class Constants:
-
     BATCH_STARTED = 'Started'
     BATCH_COMPLETED = 'Completed'
     BATCH_RUNNING = 'Running'
 
 
 class UsLocations:
-
     states = {
         'AK': 'Alaska',
         'AL': 'Alabama',
@@ -71,7 +84,7 @@ class UsLocations:
         'WY': 'Wyoming'
     }
 
-    def get_state_abb(self,state):
+    def get_state_abb(self, state):
         res = [k for k, v in self.states.items() if v.lower() == state.lower()]
         if res.__len__() == 1:
             return res[0]
@@ -85,7 +98,6 @@ class Locations(models.Model):
 
 
 class Batch(models.Model):
-
     start_timestamp = models.BigIntegerField()
     completed_timestamp = models.BigIntegerField(default=-1)
     time_taken = models.IntegerField(default=-1)
@@ -107,20 +119,110 @@ class Batch(models.Model):
         batch = Batch.objects.get(status=status)
         return batch.objects.all()
 
+    def into_batch_synced(self) -> BatchSynced:
+        # Safety: Batch must be marked as synced to convert to synced
+        assert self.synced
+        completion_msg: BatchCompleted = BatchCompleted(ads_found=self.total_ads_found,
+                                                        bots_started=self.total_bots,
+                                                        external_ip=self.external_ip,
+                                                        host_hostname=self.server_hostname,
+                                                        hostname=self.server_container,
+                                                        location=self.location.state_name,
+                                                        requests=self.total_requests,
+                                                        run_id=self.start_timestamp,
+                                                        timestamp=self.completed_timestamp,
+                                                        status=BatchCompletionStatus.COMPLETE,
+                                                        video_list_size=self.video_list_size,
+                                                        )
+        # Anything that is marked as synced, is assumed synced without errors
+        batch_synced: BatchSynced = BatchSynced(batch_info=completion_msg, sync_result=BatchSyncComplete())
+        return batch_synced
+
 
 class Bots(models.Model):
     name = models.CharField(max_length=100)
+
+
+class CategoryManager(models.Manager):
+
+    def from_valid_category_and_name(self, category_id: int, name: str) -> Categories:
+        try:
+            cat, created = self.objects.get_or_create(cat_id=category_id, name=str(name).encode('utf-8'))
+            return cat
+        except MultipleObjectsReturned:
+            # Return first
+            return self.objects.filter(cat_id=category_id, name=str(name).encode('utf-8')).first()
+
+    def missing(self) -> Categories:
+        cat, created = self.get_or_create(category_id=MISSING_ID, name=MISSING_NAME)
+        return cat
+
+    def external(self) -> Categories:
+        cat, created = self.get_or_create(category_id=EXTERNAL_ID, name=EXTERNAL_NAME)
+        return cat
 
 
 class Categories(models.Model):
     cat_id = models.IntegerField()
     name = models.CharField(max_length=100)
 
+    objects = CategoryManager()
+
+    def mark_missing(self):
+        self.cat_id = MISSING_ID
+        self.name = MISSING_NAME
+
+    def mark_external(self):
+        self.cat_id = EXTERNAL_ID
+        self.name = EXTERNAL_NAME
+
+    def is_missing(self) -> bool:
+        """The video is missing and thus the category cannot be found"""
+        return self.cat_id == MISSING_ID and self.name == MISSING_NAME
+
+    def is_external(self) -> bool:
+        """The video is externally hosted from YouTube and thus has no YouTube category"""
+        return self.cat_id == EXTERNAL_ID and self.name == EXTERNAL_NAME
+
+
+class ChannelManager(models.Manager):
+
+    def from_valid_channel_and_name(self, channel_id: int, name: str) -> Channels:
+        try:
+            ch, created = self.objects.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
+            return ch
+        except MultipleObjectsReturned:
+            # Use first
+            return self.objects.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
+
+    def missing(self) -> Channels:
+        chan, created = self.get_or_create(channel_id=MISSING_ID, name=MISSING_NAME)
+        return chan
+
+    def external(self) -> Channels:
+        chan, created = self.get_or_create(channel_id=EXTERNAL_ID, name=EXTERNAL_NAME)
+        return chan
+
 
 class Channels(models.Model):
     channel_id = models.TextField()
     name = models.CharField(max_length=255)
     description = models.CharField(max_length=255, default='')
+    objects = ChannelManager()
+
+    def is_external(self) -> bool:
+        return self.name == EXTERNAL_NAME and self.channel_id == EXTERNAL_ID
+
+    def is_missing(self) -> bool:
+        return self.name == MISSING_NAME and self.channel_id == MISSING_ID
+
+    def mark_missing(self):
+        self.cat_id = MISSING_ID
+        self.name = MISSING_NAME
+
+    def mark_external(self):
+        self.cat_id = EXTERNAL_ID
+        self.name = EXTERNAL_NAME
 
 
 class CheckStatus(Enum):
@@ -136,10 +238,24 @@ class CollectionType(Enum):
 
 
 class AdFile(models.Model):
-
     id = models.AutoField(db_column="AdFile_ID", primary_key=True)
     ad_filepath = models.TextField(null=True)
     collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType])
+
+
+class VideoManager(models.Manager):
+    def external(self, vid_url: str) -> Videos:
+        vid, created = self.get_or_create(url=vid_url)
+        vid.channel = Channels.objects.external()
+        vid.category = Channels.objects.external()
+        return vid
+
+    def missing(self, vid_url: str) -> Videos:
+        vid, created = self.get_or_create(url=vid_url)
+        vid.check_status = CheckStatus.MISSING
+        vid.channel = Channels.objects.missing()
+        vid.category = Channels.objects.missing()
+        return vid
 
 
 class Videos(models.Model):
@@ -154,7 +270,10 @@ class Videos(models.Model):
     AdFile_ID = models.ForeignKey(db_column="AdFile_ID", to=AdFile, on_delete=models.SET_NULL, null=True)
     checked = models.BooleanField(null=False, default=False)
     time_checked = models.DateTimeField(null=True, auto_now=True)
-    check_status = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CheckStatus], default=CheckStatus.NOT_CHECKED.value)
+    check_status = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CheckStatus],
+                                    default=CheckStatus.NOT_CHECKED.value)
+
+    objects = VideoManager()
 
 
 class Ad_Found_WatchLog(models.Model):
@@ -168,6 +287,3 @@ class Ad_Found_WatchLog(models.Model):
     ad_duration = models.IntegerField(default=0)
     ad_skip_duration = models.IntegerField(default=0)
     ad_system = models.CharField(max_length=255, default='')
-
-
-

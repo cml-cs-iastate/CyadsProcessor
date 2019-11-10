@@ -9,10 +9,10 @@ from more_itertools import chunked
 import os
 from django.core.exceptions import ObjectDoesNotExist
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchCompletionStatus, BatchSynced, BatchSyncComplete
-from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels
+from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, CheckStatus
 from processor.models import Locations, UsLocations
 from processor.vast import Parser
-from processor.video_metadata import VideoMetadata
+from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
 
 import pathlib
@@ -24,6 +24,7 @@ import itertools
 
 from django.db.models import QuerySet
 
+from processor.exceptions import BatchNotSynced
 
 def chunked_iterable(iterable, size):
     it = iter(iterable)
@@ -130,32 +131,20 @@ class BatchProcessor:
             self.process_batch_synced(batch_data)
         elif self.event == BotEvents.PROCESS.value:
             self.process_all_unprocessed_but_synced()
-
+        elif self.event == BotEvents.REPROCESS_BATCH.value:
+            self.r
 
     def process_all_unprocessed_but_synced(self):
         failed = False
         unprocessed_batches: QuerySet[Batch] = Batch.objects.filter(synced=True, processed=False)
         for unprocessed in unprocessed_batches:
             try:
-                b = unprocessed
-                completion_msg: BatchCompleted = BatchCompleted(ads_found=b.total_ads_found,
-                                                                bots_started=b.total_bots,
-                                                                external_ip=b.external_ip,
-                                                                host_hostname=b.server_hostname,
-                                                                hostname=b.server_container,
-                                                                location=b.location.state_name,
-                                                                requests=b.total_requests,
-                                                                run_id=b.start_timestamp,
-                                                                timestamp=b.completed_timestamp,
-                                                                status=BatchCompletionStatus.COMPLETE,
-                                                                video_list_size=b.video_list_size,
-                                                                )
                 # Anything that is marked as synced, is assumed synced without errors
-                batch_synced: BatchSynced = BatchSynced(batch_info=completion_msg, sync_result=BatchSyncComplete())
+                batch_synced = unprocessed.into_batch_synced()
                 # Process the synced batch
                 self.process_batch_synced(batch_synced)
             except Exception as e:
-                self.logger.exception(f"error processing redone batch: batch_id: {b.id}")
+                self.logger.exception(f"error processing redone batch: batch_id: {unprocessed.id}")
                 failed = True
                 continue
         if failed:
@@ -222,7 +211,6 @@ class BatchProcessor:
                                                          server_container=batch_info.hostname,
                                                          location=loc)
 
-                #ERROR: Queryset is not an iterator
                 # Keep the first
                 batch = next(batches.iterator())
 
@@ -338,10 +326,6 @@ class BatchProcessor:
                 # Use the first of the duplicates
                 vids: QuerySet[Videos] = Videos.objects.filter(url=vid_id)
                 vid = vids[0]
-                if is_ad:
-                    vid.watched_as_ad = vid.watched_as_ad + times_seen
-                else:
-                    vid.watched_as_video = vid.watched_as_video + times_seen
             # Save our new count of times seen
             if is_ad:
                 vid.watched_as_ad = vid.watched_as_ad + times_seen
@@ -349,23 +333,31 @@ class BatchProcessor:
                 vid.watched_as_video = vid.watched_as_video + times_seen
             vid.save()
 
+
+        # Get and save info on videos we don't have info on yet.
         # Can only get info 50 videos at a time from YouTube data API
         for chunk in chunked(not_viewed.keys(), n=50):
 
             chunk = list(chunk)
             all_metadata = VideoMetadata(chunk, self.api_key)
+            metadata: VideoMetadata
             for idx, metadata in enumerate(all_metadata):
-                print(f"idx: {idx}, vid_cat: {metadata.category_name}, vid_id: {metadata.id}")
-                cat = self.save_categories(metadata.category_id,metadata.category_name)
-                channel = self.save_channel(metadata.channel_id, metadata.channel_title)
-
+                print(f"idx: {idx}, vid_id: {metadata.id}, missing: {metadata.available()}")
                 # Create the video entry since it doesn't exist
-                vid, created = Videos.objects.get_or_create(url=metadata.id,
-                                                            category=cat, channel=channel)
 
-                vid.keywords = str(metadata.keywords).encode('utf-8')
-                vid.description = str(metadata.description).encode('utf-8')
-                vid.title = str(metadata.title).encode('utf-8')
+                # If video is removed from YouTube
+                if not metadata.available():
+                    vid = vid.objects.missing(metadata.id)
+                else:
+                    cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
+                    channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
+
+                    vid.category = cat
+                    vid.channel = channel
+
+                    vid.keywords = str(metadata.keywords).encode('utf-8')
+                    vid.description = str(metadata.description).encode('utf-8')
+                    vid.title = str(metadata.title).encode('utf-8')
 
                 # Use youtube video id as key to lookup total times seen in batch
                 times_viewed = not_viewed[metadata.id]
@@ -419,10 +411,7 @@ class BatchProcessor:
                 if len(parsed_ad.video_id) == 11:
                     ad_list.append(parsed_ad.video_id)
                 else:
-                    cat = self.save_categories(0, 'external')
-                    channel = self.save_channel('0', 'external')
-                    vid, created = Videos.objects.get_or_create(url=parsed_ad.video_id,
-                                                                category=cat, channel=channel)
+                    vid = Videos.objects.external(parsed_ad.video_id)
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
@@ -442,7 +431,7 @@ class BatchProcessor:
 
     def save_ad_information_v2(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.json")
-        ad_list = []
+        ad_list: List[str] = []
         for video in videos:
             self.logger.error("Version 2 parsing not implemented for ad format parsing")
             raise Exception("V2 Ad info parsing not implemented")
@@ -468,10 +457,7 @@ class BatchProcessor:
                 if len(ad_video) == 11:
                     ad_list.append(ad_video)
                 else:
-                    cat = self.save_categories(0, 'external')
-                    channel = self.save_channel('0', 'external')
-                    vid, created = Videos.objects.get_or_create(url=ad_video,
-                                                                category=cat, channel=channel)
+                    vid = Videos.objects.external(ad_video)
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
@@ -500,23 +486,6 @@ class BatchProcessor:
                                                                   bot=bot_id,
                                                                   ad_video=ad_seen_id)
             wl.save()
-
-    def save_channel(self, channel_id: str, name: str) -> Channels:
-        try:
-            ch, created = Channels.objects.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
-            return ch
-        except MultipleObjectsReturned:
-            # Use first
-            return Channels.objects.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
-
-    def save_categories(self, cat_id: int, name: str) -> Categories:
-        try:
-            cat, created = Categories.objects.get_or_create(cat_id=cat_id, name=str(name).encode('utf-8'))
-            return cat
-        except MultipleObjectsReturned:
-            # Return first
-            return Categories.objects.filter(cat_id=cat_id, name=str(name).encode('utf-8')).first()
-
 
     def save_bots(self, name: str) -> Bots:
         bot, created = Bots.objects.get_or_create(name=name)

@@ -1,0 +1,2 @@
+class BatchNotSynced(Exception):
+    pass

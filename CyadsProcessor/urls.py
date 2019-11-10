@@ -21,11 +21,14 @@ from messaging.subscribers.batch_subscriber import BatchSubscriber
 from downloader.download import DownloadProcessor
 import downloader
 from downloader import views
+import processor
 
 urlpatterns = [
     path('', include('dashboard.urls')),
     path('admin/', admin.site.urls),
     path('download/', downloader.views.download, name="downloader")
+    path("batch/<int:batch_id>/reprocess", processor.views.reprocess, name="reprocess")
+
 ]
 
 
