@@ -20,3 +20,7 @@ def reprocess(request, batch_id) -> HttpResponse:
     batch_synced = batch.into_batch_synced()
     processor.process_batch_synced(batch_synced)
     return HttpResponse(f"processing batch: {batch_id}")
+
+
+def test(request, number: int):
+    return HttpResponse(f"Server active: Got number: {number}")

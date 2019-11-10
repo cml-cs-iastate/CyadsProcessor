@@ -4,17 +4,16 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from enum import Enum
 
-from messaging.payloads.BatchPayload import BatchCompletionStatus, BatchSyncComplete
-from .BatchProcessor import BatchSynced, BatchCompleted
+from messaging.payloads.BatchPayload import BatchCompletionStatus, BatchSyncComplete, BatchSynced, BatchCompleted
 
 # Magic constants for db models
+# Using throughout models which don't allow null to indicate missing
 MISSING_ID = -1
 MISSING_NAME = "missing"
-"""Using throughout models which don't allow null to indicate missing"""
 
+# Using throughout models which don't allow null to indicate external
 EXTERNAL_ID = 0
 EXTERNAL_NAME = "external"
-"""Using throughout models which don't allow null to indicate external"""
 
 
 class Constants:
@@ -154,11 +153,11 @@ class CategoryManager(models.Manager):
             return self.objects.filter(cat_id=category_id, name=str(name).encode('utf-8')).first()
 
     def missing(self) -> Categories:
-        cat, created = self.get_or_create(category_id=MISSING_ID, name=MISSING_NAME)
+        cat, created = self.get_or_create(cat_id=MISSING_ID, name=MISSING_NAME)
         return cat
 
     def external(self) -> Categories:
-        cat, created = self.get_or_create(category_id=EXTERNAL_ID, name=EXTERNAL_NAME)
+        cat, created = self.get_or_create(cat_id=EXTERNAL_ID, name=EXTERNAL_NAME)
         return cat
 
 
@@ -245,16 +244,16 @@ class AdFile(models.Model):
 
 class VideoManager(models.Manager):
     def external(self, vid_url: str) -> Videos:
-        vid, created = self.get_or_create(url=vid_url)
-        vid.channel = Channels.objects.external()
-        vid.category = Channels.objects.external()
+        channel = Channels.objects.external()
+        category = Categories.objects.external()
+        vid, created = self.get_or_create(url=vid_url, channel=channel, category=category)
         return vid
 
     def missing(self, vid_url: str) -> Videos:
-        vid, created = self.get_or_create(url=vid_url)
+        channel = Channels.objects.missing()
+        category = Categories.objects.missing()
+        vid, created = self.get_or_create(url=vid_url, channel=channel, category=category)
         vid.check_status = CheckStatus.MISSING
-        vid.channel = Channels.objects.missing()
-        vid.category = Channels.objects.missing()
         return vid
 
 

@@ -47,8 +47,8 @@ class BatchSubscriber:
             message.ack()
             return
         try:
-            processor = BatchProcessor(event)
-            processor.process(message.data)
+            processor = BatchProcessor()
+            processor.process(batch_data=message.data, event=event)
             message.ack()
         except Exception as e:
             self.logger.error("Got error while processing ")

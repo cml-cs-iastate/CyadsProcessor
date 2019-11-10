@@ -8,9 +8,8 @@ from more_itertools import chunked
 
 import os
 from django.core.exceptions import ObjectDoesNotExist
-from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchCompletionStatus, BatchSynced, BatchSyncComplete
-from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, CheckStatus
-from processor.models import Locations, UsLocations
+from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
+from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, UsLocations
 from processor.vast import Parser
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
@@ -104,8 +103,7 @@ class BatchProcessor:
 
     logger = logging.getLogger(__name__)
 
-    def __init__(self, event):
-        self.event = event
+    def __init__(self):
         self.api_key = os.getenv('GOOGLE_KEY')
         self.dump_path: str = os.getenv('DUMP_PATH')
 
@@ -113,26 +111,24 @@ class BatchProcessor:
         from django import db
         db.close_old_connections()
 
-    def process(self, batch_data):
+    def process(self, batch_data, event: BotEvents):
 
         # needs to be done because long idle connections might have been closed by mysql server
         self.reset_database_connection()
 
-        if self.event == BotEvents.BATCH_STARTED.value:
+        if event == BotEvents.BATCH_STARTED:
             batch_data = BatchStarted.from_json(batch_data)
             self.process_batch_started(batch_data)
 
-        elif self.event == BotEvents.BATCH_COMPLETED.value:
+        elif event == BotEvents.BATCH_COMPLETED:
             batch_data = BatchCompleted.from_json(batch_data)
             self.process_batch_completed(batch_data)
 
-        elif self.event == BotEvents.BATCH_SYNCED.value:
+        elif event == BotEvents.BATCH_SYNCED:
             batch_data = BatchSynced.from_json(batch_data)
             self.process_batch_synced(batch_data)
-        elif self.event == BotEvents.PROCESS.value:
+        elif event == BotEvents.PROCESS:
             self.process_all_unprocessed_but_synced()
-        elif self.event == BotEvents.REPROCESS_BATCH.value:
-            self.r
 
     def process_all_unprocessed_but_synced(self):
         failed = False
@@ -149,7 +145,6 @@ class BatchProcessor:
                 continue
         if failed:
             raise Exception("processing a batch failed with process pubsub")
-
 
     def process_batch_started(self, batch_data):
         from processor.models import Batch
@@ -333,6 +328,10 @@ class BatchProcessor:
                 vid.watched_as_video = vid.watched_as_video + times_seen
             vid.save()
 
+        # Benchmark
+        max_queries = len(not_viewed.keys())
+        actual_queries = 0
+
 
         # Get and save info on videos we don't have info on yet.
         # Can only get info 50 videos at a time from YouTube data API
@@ -341,13 +340,15 @@ class BatchProcessor:
             chunk = list(chunk)
             all_metadata = VideoMetadata(chunk, self.api_key)
             metadata: VideoMetadata
+            # Made X queries
+            actual_queries += len(all_metadata)
             for idx, metadata in enumerate(all_metadata):
                 print(f"idx: {idx}, vid_id: {metadata.id}, missing: {metadata.available()}")
                 # Create the video entry since it doesn't exist
 
                 # If video is removed from YouTube
                 if not metadata.available():
-                    vid = vid.objects.missing(metadata.id)
+                    vid = Videos.objects.missing(metadata.id)
                 else:
                     cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
@@ -366,6 +367,7 @@ class BatchProcessor:
                 else:
                     vid.watched_as_video = vid.watched_as_video + viewed_videos[metadata.id]
                 vid.save()
+        self.logger.debug(f"Made {actual_queries} youtube queries. Max should be: {max_queries}")
 
     def save_video_information_v1(self, dump_path: DumpPath):
         ad_view_paths = dump_path.to_path().glob('Bot*.xml')
