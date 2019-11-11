@@ -343,7 +343,7 @@ class BatchProcessor:
             # Made X queries
             actual_queries += len(all_metadata)
             for idx, metadata in enumerate(all_metadata):
-                print(f"idx: {idx}, vid_id: {metadata.id}, missing: {metadata.available()}")
+                print(f"idx: {idx}, vid_id: {metadata.id}, available: {metadata.available()}")
                 # Create the video entry since it doesn't exist
 
                 # If video is removed from YouTube
