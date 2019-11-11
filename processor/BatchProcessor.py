@@ -9,7 +9,8 @@ from more_itertools import chunked
 import os
 from django.core.exceptions import ObjectDoesNotExist
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
-from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, UsLocations
+from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
+    UsLocations
 from processor.vast import Parser
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
@@ -24,6 +25,7 @@ import itertools
 from django.db.models import QuerySet
 
 from processor.exceptions import BatchNotSynced
+
 
 def chunked_iterable(iterable, size):
     it = iter(iterable)
@@ -61,6 +63,7 @@ class DumpPath:
                 .joinpath(str(self.time_started))
         )
 
+
 @dataclass
 class FullAdPath:
     """Specific file of ad info"""
@@ -75,9 +78,9 @@ class FullAdPath:
     @staticmethod
     def from_dump_path_and_file(dump_path: DumpPath, file_path: Path) -> FullAdPath:
         (bot_name,
-        attempt,
-        request_timestamp,
-        video_watched) = file_path.stem.split("#")
+         attempt,
+         request_timestamp,
+         video_watched) = file_path.stem.split("#")
         ext = file_path.suffix
 
         return FullAdPath(dump_dir_info=dump_path,
@@ -89,18 +92,15 @@ class FullAdPath:
                           file_path=file_path)
 
 
-
-
 class AdFile:
     def __init__(self, filename: pathlib.Path):
         (self.bot_name,
-        self.try_num,
-        self.ad_seen_at,
-        self.video_watched) = filename.stem.split("#")
+         self.try_num,
+         self.ad_seen_at,
+         self.video_watched) = filename.stem.split("#")
 
 
 class BatchProcessor:
-
     logger = logging.getLogger(__name__)
 
     def __init__(self):
@@ -173,7 +173,7 @@ class BatchProcessor:
                                       server_hostname=batch_data.host_hostname,
                                       server_container=batch_data.hostname,
                                       completed_timestamp=-1)
-            batch.completed_timestamp=batch_data.timestamp
+            batch.completed_timestamp = batch_data.timestamp
             batch.status = Constants.BATCH_COMPLETED
             batch.time_taken = batch.completed_timestamp - batch.start_timestamp
             batch.total_requests = batch_data.requests
@@ -196,15 +196,15 @@ class BatchProcessor:
             loc = self.get_location_info(batch_info.location)
             try:
                 batch, created = Batch.objects.get_or_create(start_timestamp=batch_info.run_id,
-                                                         server_hostname=batch_info.host_hostname,
-                                                         server_container=batch_info.hostname,
-                                                         location=loc)
+                                                             server_hostname=batch_info.host_hostname,
+                                                             server_container=batch_info.hostname,
+                                                             location=loc)
             except MultipleObjectsReturned:
                 # Get all duplicates
                 batches = Batch.objects.filter(start_timestamp=batch_info.run_id,
-                                                         server_hostname=batch_info.host_hostname,
-                                                         server_container=batch_info.hostname,
-                                                         location=loc)
+                                               server_hostname=batch_info.host_hostname,
+                                               server_container=batch_info.hostname,
+                                               location=loc)
 
                 # Keep the first
                 batch = next(batches.iterator())
@@ -241,8 +241,8 @@ class BatchProcessor:
             # Reset
             # Deletes all existing watchlogs (does not delete video info) pertaining ot a batch.
             # I assume this is to update the batch_id pertaining to each video view for each bot.
-            #self.logger.info(f"Batch {batch.id} is already processed. Deleting batch and associated Watchlog entries to reprocess")
-            #batch.delete()
+            # self.logger.info(f"Batch {batch.id} is already processed. Deleting batch and associated Watchlog entries to reprocess")
+            # batch.delete()
         except Exception as e:
             self.logger.error(f"Error While saving batch synced message into the database")
             self.logger.exception(str(e))
@@ -287,7 +287,7 @@ class BatchProcessor:
 
     def save_video_metadata(self, video_list: List[str], is_ad=False):
         """Save the video metadata of the video the bot requested"""
-
+        self.logger.info("Enter save_video_metadata")
         # Only need to lookup video once. Increase by overall views by bot
         # Reduces queries to YouTube data API
 
@@ -303,6 +303,7 @@ class BatchProcessor:
             viewed_videos[video] += 1
         print(viewed_videos)
 
+        self.logger.info("Starting to check if videos already saved")
         vid_id: str
         times_seen: int
         for vid_id, times_seen in viewed_videos.items():
@@ -327,12 +328,13 @@ class BatchProcessor:
             else:
                 vid.watched_as_video = vid.watched_as_video + times_seen
             vid.save()
+        self.logger.info("Finished checking if videos already saved")
 
         # Benchmark
         max_queries = len(not_viewed.keys())
         actual_queries = 0
 
-
+        self.logger.info("Starting to grab YT metadata for videos not saved")
         # Get and save info on videos we don't have info on yet.
         # Can only get info 50 videos at a time from YouTube data API
         for chunk in chunked(not_viewed.keys(), n=50):
@@ -367,7 +369,10 @@ class BatchProcessor:
                 else:
                     vid.watched_as_video = vid.watched_as_video + viewed_videos[metadata.id]
                 vid.save()
-        self.logger.debug(f"Made {actual_queries} youtube queries. Max should be: {max_queries}")
+        self.logger.info("Finished grabbing YT metadata for videos not saved")
+
+        self.logger.info(f"Made {actual_queries} youtube queries. Max should be: {max_queries}")
+        self.logger.info("exit save_video_metadata")
 
     def save_video_information_v1(self, dump_path: DumpPath):
         ad_view_paths = dump_path.to_path().glob('Bot*.xml')
@@ -407,7 +412,7 @@ class BatchProcessor:
         videos = dump_path.to_path().glob("*.xml")
         ad_list = []
         for video in videos:
-            #parse the vast xml
+            # parse the vast xml
             try:
                 parsed_ad = Parser(video.as_posix())
                 if len(parsed_ad.video_id) == 11:
@@ -438,7 +443,6 @@ class BatchProcessor:
             self.logger.error("Version 2 parsing not implemented for ad format parsing")
             raise Exception("V2 Ad info parsing not implemented")
         self.save_video_metadata(ad_list, is_ad=True)
-
 
     def save_video_information_v3(self, dump_path: DumpPath):
         ad_view_paths = dump_path.to_path().glob('Bot*.txt')
@@ -492,5 +496,3 @@ class BatchProcessor:
     def save_bots(self, name: str) -> Bots:
         bot, created = Bots.objects.get_or_create(name=name)
         return bot
-
-
