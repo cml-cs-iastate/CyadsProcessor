@@ -18,11 +18,12 @@ RUN rm -rf logs/*
 
 COPY requirements.txt /opt/CyadsProcessor/requirements.txt
 RUN pip3 install --no-cache-dir -r /opt/CyadsProcessor/requirements.txt
-COPY . /opt/CyadsProcessor
+
 WORKDIR /opt/CyadsProcessor
-
-
-RUN chmod +x /opt/CyadsProcessor/startup.sh
+ADD VERSION .
+COPY startup.sh .
+RUN chmod +x startup.sh
+COPY . /opt/CyadsProcessor
 
 CMD ["/opt/CyadsProcessor/startup.sh"]
 
