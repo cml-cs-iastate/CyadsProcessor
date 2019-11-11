@@ -264,10 +264,10 @@ class BatchProcessor:
             self.save_ad_information_v1(dump_path)
             self.save_watchlog_information_v1(dump_path, batch)
         elif ad_format_version == 2:
-            raise Exception("V2 ad parsing not implemented")
-            self.save_video_information_v2(dump_path)
-            self.save_ad_information_v2(dump_path, batch)
-            self.save_watchlog_information_v2(dump_path, batch)
+            batch.remarks = "V2 json ad info has no results"
+            #self.save_video_information_v2(dump_path)
+            #self.save_ad_information_v2(dump_path, batch)
+            #self.save_watchlog_information_v2(dump_path, batch)
         elif ad_format_version == 3:
             self.save_video_information_v3(dump_path)
             self.save_ad_information_v3(dump_path)
