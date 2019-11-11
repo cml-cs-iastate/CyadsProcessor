@@ -146,11 +146,11 @@ class CategoryManager(models.Manager):
 
     def from_valid_category_and_name(self, category_id: int, name: str) -> Categories:
         try:
-            cat, created = self.objects.get_or_create(cat_id=category_id, name=str(name).encode('utf-8'))
+            cat, created = self.get_or_create(cat_id=category_id, name=str(name).encode('utf-8'))
             return cat
         except MultipleObjectsReturned:
             # Return first
-            return self.objects.filter(cat_id=category_id, name=str(name).encode('utf-8')).first()
+            return self.filter(cat_id=category_id, name=str(name).encode('utf-8')).first()
 
     def missing(self) -> Categories:
         cat, created = self.get_or_create(cat_id=MISSING_ID, name=MISSING_NAME)
@@ -188,11 +188,11 @@ class ChannelManager(models.Manager):
 
     def from_valid_channel_and_name(self, channel_id: int, name: str) -> Channels:
         try:
-            ch, created = self.objects.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
+            ch, created = self.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
             return ch
         except MultipleObjectsReturned:
             # Use first
-            return self.objects.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
+            return self.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
 
     def missing(self) -> Channels:
         chan, created = self.get_or_create(channel_id=MISSING_ID, name=MISSING_NAME)
