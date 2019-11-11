@@ -10,4 +10,6 @@ echo 'Done running migrations '
 echo Starting Gunicorn.
 exec gunicorn CyadsProcessor.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 1
+    --workers 1 \
+    --timeout 300 \
+    --graceful-timeout 300
