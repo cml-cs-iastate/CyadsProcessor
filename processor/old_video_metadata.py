@@ -81,7 +81,7 @@ class VideoMetadata:
     def __next__(self):
 
         # The `current_metadata` variable will only update if there are more videos
-        # Using the incremented pointer leads to Off by One erros (IndexErrors)
+        # Using the incremented index leads to Off by One erros (IndexErrors)
         try:
             self._current_metadata = self._multi_metadata[self._index_next_video]
         except IndexError:

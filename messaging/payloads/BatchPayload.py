@@ -8,6 +8,7 @@ from typing import Optional, Union
 def utc_timestamp_seconds():
     return int(time.time())
 
+
 class InvalidBotCompletionStatus(Exception):
     '''Raised if an invalid bot completion status is given'''
     def __init__(self, message: str, status: str):
@@ -35,6 +36,8 @@ class BotEvents(str, Enum):
     BATCH_SYNCED = "batch_synced"
     # Process all unprocessed batches which are synced
     PROCESS = "process"
+    # Test event
+    TEST = "test"
 
 
 class BatchStarted:
@@ -198,6 +201,7 @@ class BatchSyncStatus(Enum):
     def to_json(self) -> str:
         return json.dumps({"kind": self.value})
 
+
 class BatchSyncComplete:
     def __init__(self):
         self.kind = BatchSyncStatus.COMPLETE
@@ -270,6 +274,8 @@ class BatchSynced:
             sync_result: BatchSyncComplete = BatchSyncComplete.from_json(info)
         elif kind == BatchSyncStatus.ERROR:
             sync_result = BatchSyncError.from_json(data["data"])
+        else:
+            raise Exception(f"Invalid BatchSyncStatus: {kind}")
 
         return BatchSynced(batch_info=batch_info,
                            sync_result=sync_result)
@@ -281,13 +287,7 @@ class BatchPayload:
     def get_payload_event(msg):
         data = json.loads(msg)
         event = data.get("event")
-        if event == BotEvents.BATCH_COMPLETED.value:
-            return BotEvents.BATCH_COMPLETED.value
-        elif event == BotEvents.BATCH_STARTED.value:
-            return BotEvents.BATCH_STARTED.value
-        elif event == BotEvents.BATCH_SYNCED.value:
-            return BotEvents.BATCH_SYNCED.value
-        elif event == BotEvents.PROCESS.value:
-            return BotEvents.PROCESS.value
-        else:
-            raise ValueError(f"invalid msg, no event type: {event}")
+        try:
+            return BotEvents(event)
+        except ValueError:
+            raise ValueError(f"invalid msg, no BotEvent type: {event}")
