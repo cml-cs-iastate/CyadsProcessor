@@ -1,17 +1,20 @@
 from __future__ import annotations
+
+import json
+
 from typing import List, Dict, DefaultDict
-import glob
 from collections import defaultdict
-import logging
 
 from more_itertools import chunked
 
 import os
 from django.core.exceptions import ObjectDoesNotExist
+
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations
 from processor.vast import Parser
+
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
 
@@ -25,6 +28,16 @@ import itertools
 from django.db.models import QuerySet
 
 from processor.exceptions import BatchNotSynced
+from processor.exceptions import WatchLogAdExtractionException
+
+
+
+import structlog
+from structlog import get_logger
+from structlog.stdlib import LoggerFactory
+structlog.configure(logger_factory=LoggerFactory())
+logger = get_logger()
+
 
 
 def chunked_iterable(iterable, size):
@@ -99,9 +112,11 @@ class AdFile:
          self.ad_seen_at,
          self.video_watched) = filename.stem.split("#")
 
+from typing import List
+
 
 class BatchProcessor:
-    logger = logging.getLogger(__name__)
+    logger = logger
 
     def __init__(self):
         self.api_key = os.getenv('GOOGLE_KEY')
@@ -301,7 +316,7 @@ class BatchProcessor:
             # store video_id and times seen for later
             # This creates a set of videos as well
             viewed_videos[video] += 1
-        print(viewed_videos)
+        self.logger.info("videos_watched", counts=viewed_videos)
 
         self.logger.info("Starting to check if videos already saved")
         vid_id: str
@@ -330,6 +345,7 @@ class BatchProcessor:
             vid.save()
         self.logger.info("Finished checking if videos already saved")
 
+        self.logger.info("need to lookup videos", number=len(not_viewed), videos=list(not_viewed.keys()))
         # Benchmark
         max_queries = len(not_viewed.keys())
         actual_queries = 0
@@ -345,7 +361,7 @@ class BatchProcessor:
             # Made X queries
             actual_queries += len(all_metadata)
             for idx, metadata in enumerate(all_metadata):
-                print(f"idx: {idx}, vid_id: {metadata.id}, available: {metadata.available()}")
+                self.logger.info(f"idx: {idx}, vid_id: {metadata.id}, available: {metadata.available()}")
                 # Create the video entry since it doesn't exist
 
                 # If video is removed from YouTube
@@ -426,7 +442,7 @@ class BatchProcessor:
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
-                self.logger.info("Cannot parse the vast file. No Ad information was found")
+                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video)
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
