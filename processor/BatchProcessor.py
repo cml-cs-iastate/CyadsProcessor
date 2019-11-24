@@ -354,7 +354,8 @@ class BatchProcessor:
                 else:
                     cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
-
+                    vid = Videos()
+                    vid.url = metadata.id
                     vid.category = cat
                     vid.channel = channel
 
@@ -382,8 +383,11 @@ class BatchProcessor:
         self.save_video_metadata(video_list)
 
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
+        """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
+        error_files = []
         videos = dump_path.to_path().glob('Bot*.xml')
         for video in videos:
+            request_metadata = FullAdPath.from_dump_path_and_file(dump_path, video)
             try:
                 parsed_ad = Parser(video.as_posix())
                 if len(parsed_ad.video_id) == 11:
@@ -392,12 +396,12 @@ class BatchProcessor:
                     source = 'external'
 
                 # Get the db id of the video id
-                ad_video: Videos = Videos.objects.get(url=parsed_ad.video_id).first()
-                vid: Videos = Videos.objects.get(url=FullAdPath.video_watched).first()
-                bot = self.save_bots(FullAdPath.bot_name)
-                wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch, video_watched=vid,
-                                                                      attempt=FullAdPath.attempt,
-                                                                      request_timestamp=FullAdPath.request_timestamp,
+                ad_video: Videos = Videos.objects.filter(url=parsed_ad.video_id).first()
+                vid: Videos = Videos.objects.filter(url=request_metadata.video_watched).first()
+                bot = self.save_bots(request_metadata.bot_name)
+                wl, created = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
+                                                                      attempt=request_metadata.attempt,
+                                                                      request_timestamp=request_metadata.request_timestamp,
                                                                       bot=bot,
                                                                       ad_video=ad_video)
                 wl.ad_source = source
