@@ -299,8 +299,8 @@ class BatchProcessor:
             remarks = {}
             remarks["event"] = "no ad data inside some files"
             remarks["event_type"] = "missing"
-            remarks["files"] = [f.name for f in  wl_errors.error_files]
-            remarks["count"] = int(len(wl_errors.error_files))
+            remarks["examples"] = [f.name for f in  wl_errors.error_files[0:5]]
+            remarks["number_missing"] = int(len(wl_errors.error_files))
 
             batch.remarks = json.dumps(remarks)
 
