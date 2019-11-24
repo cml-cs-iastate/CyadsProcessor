@@ -429,7 +429,7 @@ class BatchProcessor:
                 ad_video: Videos = Videos.objects.filter(url=parsed_ad.video_id).first()
                 vid: Videos = Videos.objects.filter(url=request_metadata.video_watched).first()
                 bot = self.save_bots(request_metadata.bot_name)
-                wl, created = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
+                wl = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
                                                                       attempt=request_metadata.attempt,
                                                                       request_timestamp=request_metadata.request_timestamp,
                                                                       bot=bot,
@@ -526,7 +526,7 @@ class BatchProcessor:
             ad_seen_id = Videos.objects.filter(url=video_ad).first()
 
             video_watched_id = Videos.objects.filter(url=view_path.video_watched).first()
-            wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch,
+            wl = Ad_Found_WatchLog.objects.create(batch=batch,
                                                                   video_watched=video_watched_id,
                                                                   attempt=view_path.attempt,
                                                                   request_timestamp=view_path.request_timestamp,
