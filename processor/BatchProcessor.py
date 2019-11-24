@@ -274,21 +274,35 @@ class BatchProcessor:
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing: ', dump_path.to_path().as_posix())
         ad_format_version: int = self.determine_ad_format_version(dump_path)
-        if ad_format_version == 1:
-            self.save_video_information_v1(dump_path)
-            self.save_ad_information_v1(dump_path)
-            self.save_watchlog_information_v1(dump_path, batch)
-        elif ad_format_version == 2:
-            batch.remarks = "V2 json ad info has no results"
-            #self.save_video_information_v2(dump_path)
-            #self.save_ad_information_v2(dump_path, batch)
-            #self.save_watchlog_information_v2(dump_path, batch)
-        elif ad_format_version == 3:
-            self.save_video_information_v3(dump_path)
-            self.save_ad_information_v3(dump_path)
-            self.save_watchlog_information_v3(dump_path, batch)
-        else:
-            self.logger.error("Unsupported ad format version:", ad_format_version)
+        self.logger.info("batch info", dir=dump_path.to_path().as_posix(), ad_format_v=ad_format_version)
+        try:
+            if ad_format_version == 1:
+                self.save_video_information_v1(dump_path)
+                self.save_ad_information_v1(dump_path)
+                self.save_watchlog_information_v1(dump_path, batch)
+            elif ad_format_version == 2:
+                remarks = {}
+                remarks["event"] = "V2 json ad info has no results"
+                remarks["event_type"] = "missing"
+                batch.remarks = json.dumps(remarks)
+
+                #self.save_video_information_v2(dump_path)
+                #self.save_ad_information_v2(dump_path, batch)
+                #self.save_watchlog_information_v2(dump_path, batch)
+            elif ad_format_version == 3:
+                self.save_video_information_v3(dump_path)
+                self.save_ad_information_v3(dump_path)
+                self.save_watchlog_information_v3(dump_path, batch)
+            else:
+                self.logger.error("Unsupported ad format version:", ad_format_version)
+        except WatchLogAdExtractionException as wl_errors:
+            remarks = {}
+            remarks["event"] = "no ad data inside some files"
+            remarks["event_type"] = "missing"
+            remarks["files"] = [f.name for f in  wl_errors.error_files]
+            remarks["count"] = int(len(wl_errors.error_files))
+
+            batch.remarks = json.dumps(remarks)
 
     @staticmethod
     def determine_ad_format_version(dump_path: DumpPath) -> int:
@@ -426,7 +440,10 @@ class BatchProcessor:
                 wl.ad_system = parsed_ad.ad_system
                 wl.save()
             except Exception as e:
-                self.logger.info("Cannot parse the vast file. No Ad information was found")
+                self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
+                error_files.append(video)
+        if error_files:
+            raise WatchLogAdExtractionException(error_files=error_files)
 
     def save_ad_information_v1(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.xml")
@@ -492,11 +509,15 @@ class BatchProcessor:
 
     def save_watchlog_information_v3(self, dump_path: DumpPath, batch: Batch):
         """Save v3 ad format watchlog"""
+        error_files = []
         videos = dump_path.to_path().glob("Bot*.txt")
         for video in videos:
             view_path: FullAdPath = FullAdPath.from_dump_path_and_file(dump_path, video)
             with view_path.file_path.open("r") as f:
                 video_ad = f.read()
+            if not video_ad:
+                error_files.append(video)
+                continue
 
             # Lookup bot name id
             bot_id = self.save_bots(view_path.bot_name)
@@ -512,6 +533,8 @@ class BatchProcessor:
                                                                   bot=bot_id,
                                                                   ad_video=ad_seen_id)
             wl.save()
+        if error_files:
+            raise WatchLogAdExtractionException(error_files=error_files)
 
     def save_bots(self, name: str) -> Bots:
         bot, created = Bots.objects.get_or_create(name=name)
