@@ -160,6 +160,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'processor': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
         'messaging': {
             'handlers': ['file','console'],
             'level': 'INFO',

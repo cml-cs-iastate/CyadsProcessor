@@ -1,17 +1,20 @@
 from __future__ import annotations
+
+import json
+
 from typing import List, Dict, DefaultDict
-import glob
 from collections import defaultdict
-import logging
 
 from more_itertools import chunked
 
 import os
 from django.core.exceptions import ObjectDoesNotExist
+
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations
 from processor.vast import Parser
+
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
 
@@ -25,6 +28,16 @@ import itertools
 from django.db.models import QuerySet
 
 from processor.exceptions import BatchNotSynced
+from processor.exceptions import WatchLogAdExtractionException
+
+
+
+import structlog
+from structlog import get_logger
+from structlog.stdlib import LoggerFactory
+structlog.configure(logger_factory=LoggerFactory())
+logger = get_logger()
+
 
 
 def chunked_iterable(iterable, size):
@@ -99,9 +112,11 @@ class AdFile:
          self.ad_seen_at,
          self.video_watched) = filename.stem.split("#")
 
+from typing import List
+
 
 class BatchProcessor:
-    logger = logging.getLogger(__name__)
+    logger = logger
 
     def __init__(self):
         self.api_key = os.getenv('GOOGLE_KEY')
@@ -259,21 +274,35 @@ class BatchProcessor:
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing: ', dump_path.to_path().as_posix())
         ad_format_version: int = self.determine_ad_format_version(dump_path)
-        if ad_format_version == 1:
-            self.save_video_information_v1(dump_path)
-            self.save_ad_information_v1(dump_path)
-            self.save_watchlog_information_v1(dump_path, batch)
-        elif ad_format_version == 2:
-            batch.remarks = "V2 json ad info has no results"
-            #self.save_video_information_v2(dump_path)
-            #self.save_ad_information_v2(dump_path, batch)
-            #self.save_watchlog_information_v2(dump_path, batch)
-        elif ad_format_version == 3:
-            self.save_video_information_v3(dump_path)
-            self.save_ad_information_v3(dump_path)
-            self.save_watchlog_information_v3(dump_path, batch)
-        else:
-            self.logger.error("Unsupported ad format version:", ad_format_version)
+        self.logger.info("batch info", dir=dump_path.to_path().as_posix(), ad_format_v=ad_format_version)
+        try:
+            if ad_format_version == 1:
+                self.save_video_information_v1(dump_path)
+                self.save_ad_information_v1(dump_path)
+                self.save_watchlog_information_v1(dump_path, batch)
+            elif ad_format_version == 2:
+                remarks = {}
+                remarks["event"] = "V2 json ad info has no results"
+                remarks["event_type"] = "missing"
+                batch.remarks = json.dumps(remarks)
+
+                #self.save_video_information_v2(dump_path)
+                #self.save_ad_information_v2(dump_path, batch)
+                #self.save_watchlog_information_v2(dump_path, batch)
+            elif ad_format_version == 3:
+                self.save_video_information_v3(dump_path)
+                self.save_ad_information_v3(dump_path)
+                self.save_watchlog_information_v3(dump_path, batch)
+            else:
+                self.logger.error("Unsupported ad format version:", ad_format_version)
+        except WatchLogAdExtractionException as wl_errors:
+            remarks = {}
+            remarks["event"] = "no ad data inside some files"
+            remarks["event_type"] = "missing"
+            remarks["files"] = [f.name for f in  wl_errors.error_files]
+            remarks["count"] = int(len(wl_errors.error_files))
+
+            batch.remarks = json.dumps(remarks)
 
     @staticmethod
     def determine_ad_format_version(dump_path: DumpPath) -> int:
@@ -301,7 +330,7 @@ class BatchProcessor:
             # store video_id and times seen for later
             # This creates a set of videos as well
             viewed_videos[video] += 1
-        print(viewed_videos)
+        self.logger.info("videos_watched", counts=viewed_videos)
 
         self.logger.info("Starting to check if videos already saved")
         vid_id: str
@@ -330,6 +359,7 @@ class BatchProcessor:
             vid.save()
         self.logger.info("Finished checking if videos already saved")
 
+        self.logger.info("need to lookup videos", number=len(not_viewed), videos=list(not_viewed.keys()))
         # Benchmark
         max_queries = len(not_viewed.keys())
         actual_queries = 0
@@ -345,7 +375,7 @@ class BatchProcessor:
             # Made X queries
             actual_queries += len(all_metadata)
             for idx, metadata in enumerate(all_metadata):
-                print(f"idx: {idx}, vid_id: {metadata.id}, available: {metadata.available()}")
+                self.logger.info(f"idx: {idx}, vid_id: {metadata.id}, available: {metadata.available()}")
                 # Create the video entry since it doesn't exist
 
                 # If video is removed from YouTube
@@ -354,7 +384,8 @@ class BatchProcessor:
                 else:
                     cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
-
+                    vid = Videos()
+                    vid.url = metadata.id
                     vid.category = cat
                     vid.channel = channel
 
@@ -382,8 +413,11 @@ class BatchProcessor:
         self.save_video_metadata(video_list)
 
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
+        """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
+        error_files = []
         videos = dump_path.to_path().glob('Bot*.xml')
         for video in videos:
+            request_metadata = FullAdPath.from_dump_path_and_file(dump_path, video)
             try:
                 parsed_ad = Parser(video.as_posix())
                 if len(parsed_ad.video_id) == 11:
@@ -392,12 +426,12 @@ class BatchProcessor:
                     source = 'external'
 
                 # Get the db id of the video id
-                ad_video: Videos = Videos.objects.get(url=parsed_ad.video_id).first()
-                vid: Videos = Videos.objects.get(url=FullAdPath.video_watched).first()
-                bot = self.save_bots(FullAdPath.bot_name)
-                wl, created = Ad_Found_WatchLog.objects.get_or_create(batch=batch, video_watched=vid,
-                                                                      attempt=FullAdPath.attempt,
-                                                                      request_timestamp=FullAdPath.request_timestamp,
+                ad_video: Videos = Videos.objects.filter(url=parsed_ad.video_id).first()
+                vid: Videos = Videos.objects.filter(url=request_metadata.video_watched).first()
+                bot = self.save_bots(request_metadata.bot_name)
+                wl, created = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
+                                                                      attempt=request_metadata.attempt,
+                                                                      request_timestamp=request_metadata.request_timestamp,
                                                                       bot=bot,
                                                                       ad_video=ad_video)
                 wl.ad_source = source
@@ -406,7 +440,10 @@ class BatchProcessor:
                 wl.ad_system = parsed_ad.ad_system
                 wl.save()
             except Exception as e:
-                self.logger.info("Cannot parse the vast file. No Ad information was found")
+                self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
+                error_files.append(video)
+        if error_files:
+            raise WatchLogAdExtractionException(error_files=error_files)
 
     def save_ad_information_v1(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.xml")
@@ -422,7 +459,7 @@ class BatchProcessor:
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
-                self.logger.info("Cannot parse the vast file. No Ad information was found")
+                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video)
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
@@ -472,11 +509,15 @@ class BatchProcessor:
 
     def save_watchlog_information_v3(self, dump_path: DumpPath, batch: Batch):
         """Save v3 ad format watchlog"""
+        error_files = []
         videos = dump_path.to_path().glob("Bot*.txt")
         for video in videos:
             view_path: FullAdPath = FullAdPath.from_dump_path_and_file(dump_path, video)
             with view_path.file_path.open("r") as f:
                 video_ad = f.read()
+            if not video_ad:
+                error_files.append(video)
+                continue
 
             # Lookup bot name id
             bot_id = self.save_bots(view_path.bot_name)
@@ -492,6 +533,8 @@ class BatchProcessor:
                                                                   bot=bot_id,
                                                                   ad_video=ad_seen_id)
             wl.save()
+        if error_files:
+            raise WatchLogAdExtractionException(error_files=error_files)
 
     def save_bots(self, name: str) -> Bots:
         bot, created = Bots.objects.get_or_create(name=name)

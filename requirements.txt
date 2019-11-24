@@ -14,3 +14,4 @@ celery[redis,auth,msgpack]==4.3.0
 more-itertools==7.2.0
 git+git://github.com/cml-cs-iastate/video_metadata
 redis==3.3.11
+structlog==19.2.0
