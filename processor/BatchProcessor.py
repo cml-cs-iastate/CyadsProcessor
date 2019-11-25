@@ -299,7 +299,7 @@ class BatchProcessor:
             remarks = {}
             remarks["event"] = "no ad data inside some files"
             remarks["event_type"] = "missing"
-            remarks["examples"] = [f.name for f in wl_errors.error_files[0:3]]
+            remarks["examples"] = [f.name for f in wl_errors.error_files[0:2]]
             remarks["number_missing"] = len(wl_errors.error_files)
 
             batch.remarks = json.dumps(remarks)
@@ -464,6 +464,7 @@ class BatchProcessor:
     def save_ad_information_v1(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.xml")
         ad_list = []
+
         for video in videos:
             # parse the vast xml
             try:
@@ -475,7 +476,7 @@ class BatchProcessor:
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
-                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video)
+                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
@@ -519,6 +520,7 @@ class BatchProcessor:
                     vid = Videos.objects.external(ad_video)
                     vid.watched_as_ad += 1
                     vid.save()
+
             except Exception as e:
                 self.logger.info("Cannot parse the v3 ad file. No Ad information was found")
         self.save_video_metadata(ad_list, is_ad=True)
