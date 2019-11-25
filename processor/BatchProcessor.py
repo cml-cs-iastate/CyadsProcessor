@@ -415,6 +415,8 @@ class BatchProcessor:
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
         """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
         error_files = []
+        watchlogs_to_save = []
+
         videos = dump_path.to_path().glob('Bot*.xml')
         for video in videos:
             request_metadata = FullAdPath.from_dump_path_and_file(dump_path, video)
@@ -429,7 +431,7 @@ class BatchProcessor:
                 ad_video: Videos = Videos.objects.filter(url=parsed_ad.video_id).first()
                 vid: Videos = Videos.objects.filter(url=request_metadata.video_watched).first()
                 bot = self.save_bots(request_metadata.bot_name)
-                wl = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
+                wl = Ad_Found_WatchLog(batch=batch, video_watched=vid,
                                                                       attempt=request_metadata.attempt,
                                                                       request_timestamp=request_metadata.request_timestamp,
                                                                       bot=bot,
@@ -438,10 +440,24 @@ class BatchProcessor:
                 wl.ad_duration = parsed_ad.duration
                 wl.ad_skip_duration = parsed_ad.skip_offset
                 wl.ad_system = parsed_ad.ad_system
-                wl.save()
+                watchlogs_to_save.append(wl)
+
+                if len(watchlogs_to_save) >= 1000:
+                    bulk_len = len(watchlogs_to_save)
+                    self.logger.info("saving bulk watchlogs", n=bulk_len)
+                    Ad_Found_WatchLog.objects.bulk_create(watchlogs_to_save)
+                    watchlogs_to_save.clear()
+                    self.logger.info("saved bulk watchlogs", n=bulk_len)
             except Exception as e:
                 self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
                 error_files.append(video)
+
+        # save rest
+        bulk_len = len(watchlogs_to_save)
+        self.logger.info(f"saving rest of bulk watchlogs", n=bulk_len)
+        Ad_Found_WatchLog.objects.bulk_create(watchlogs_to_save)
+        self.logger.info(f"saved rest of bulk watchlogs", n=bulk_len)
+
         if error_files:
             raise WatchLogAdExtractionException(error_files=error_files)
 
