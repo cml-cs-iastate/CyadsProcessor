@@ -299,7 +299,7 @@ class BatchProcessor:
             remarks = {}
             remarks["event"] = "no ad data inside some files"
             remarks["event_type"] = "missing"
-            remarks["examples"] = [f.name for f in wl_errors.error_files[0:3]]
+            remarks["examples"] = [f.name for f in wl_errors.error_files[0:2]]
             remarks["number_missing"] = len(wl_errors.error_files)
 
             batch.remarks = json.dumps(remarks)
@@ -415,6 +415,8 @@ class BatchProcessor:
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
         """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
         error_files = []
+        watchlogs_to_save = []
+
         videos = dump_path.to_path().glob('Bot*.xml')
         for video in videos:
             request_metadata = FullAdPath.from_dump_path_and_file(dump_path, video)
@@ -429,7 +431,7 @@ class BatchProcessor:
                 ad_video: Videos = Videos.objects.filter(url=parsed_ad.video_id).first()
                 vid: Videos = Videos.objects.filter(url=request_metadata.video_watched).first()
                 bot = self.save_bots(request_metadata.bot_name)
-                wl = Ad_Found_WatchLog.objects.create(batch=batch, video_watched=vid,
+                wl = Ad_Found_WatchLog(batch=batch, video_watched=vid,
                                                                       attempt=request_metadata.attempt,
                                                                       request_timestamp=request_metadata.request_timestamp,
                                                                       bot=bot,
@@ -438,16 +440,34 @@ class BatchProcessor:
                 wl.ad_duration = parsed_ad.duration
                 wl.ad_skip_duration = parsed_ad.skip_offset
                 wl.ad_system = parsed_ad.ad_system
-                wl.save()
+                watchlogs_to_save.append(wl)
+
+                if len(watchlogs_to_save) % 20 == 0:
+                    self.logger.info("status: buffering watchlogs", n=len(watchlogs_to_save))
+
+                if len(watchlogs_to_save) >= 1000:
+                    bulk_len = len(watchlogs_to_save)
+                    self.logger.info("saving bulk watchlogs", n=bulk_len)
+                    Ad_Found_WatchLog.objects.bulk_create(watchlogs_to_save)
+                    watchlogs_to_save.clear()
+                    self.logger.info("saved bulk watchlogs", n=bulk_len)
             except Exception as e:
                 self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
                 error_files.append(video)
+
+        # save rest
+        bulk_len = len(watchlogs_to_save)
+        self.logger.info(f"saving rest of bulk watchlogs", n=bulk_len)
+        Ad_Found_WatchLog.objects.bulk_create(watchlogs_to_save)
+        self.logger.info(f"saved rest of bulk watchlogs", n=bulk_len)
+
         if error_files:
             raise WatchLogAdExtractionException(error_files=error_files)
 
     def save_ad_information_v1(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.xml")
         ad_list = []
+
         for video in videos:
             # parse the vast xml
             try:
@@ -459,7 +479,7 @@ class BatchProcessor:
                     vid.watched_as_ad += 1
                     vid.save()
             except Exception as e:
-                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video)
+                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
@@ -503,6 +523,7 @@ class BatchProcessor:
                     vid = Videos.objects.external(ad_video)
                     vid.watched_as_ad += 1
                     vid.save()
+
             except Exception as e:
                 self.logger.info("Cannot parse the v3 ad file. No Ad information was found")
         self.save_video_metadata(ad_list, is_ad=True)
