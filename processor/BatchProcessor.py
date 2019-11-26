@@ -442,6 +442,9 @@ class BatchProcessor:
                 wl.ad_system = parsed_ad.ad_system
                 watchlogs_to_save.append(wl)
 
+                if len(watchlogs_to_save) % 20 == 0:
+                    self.logger.info("status: buffering watchlogs", n=len(watchlogs_to_save))
+
                 if len(watchlogs_to_save) >= 1000:
                     bulk_len = len(watchlogs_to_save)
                     self.logger.info("saving bulk watchlogs", n=bulk_len)
