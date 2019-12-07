@@ -27,7 +27,7 @@ from django.db.models import QuerySet
 
 from processor.exceptions import WatchLogAdExtractionException
 
-import from datetime import datetime
+from datetime import datetime
 from processor.process_unprocessed import reconstruct_completion_msg
 
 import structlog

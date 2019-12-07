@@ -4,7 +4,6 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from enum import Enum
 
-from processor.processing_utils import DumpPath, FullAdPath, AdFile
 from messaging.payloads.BatchPayload import BatchCompletionStatus, BatchSyncComplete, BatchSynced, BatchCompleted
 
 # Magic constants for db models
