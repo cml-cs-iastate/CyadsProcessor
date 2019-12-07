@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from typing import List, Dict, DefaultDict
+from typing import DefaultDict
 from collections import defaultdict
 
 from more_itertools import chunked
@@ -13,24 +13,22 @@ from django.core.exceptions import ObjectDoesNotExist
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations
+from processor.processing_utils import DumpPath, FullAdPath
 from processor.vast import Parser
 
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
 
-import pathlib
 from pathlib import Path
-
-from dataclasses import dataclass
 
 import itertools
 
 from django.db.models import QuerySet
 
-from processor.exceptions import BatchNotSynced
 from processor.exceptions import WatchLogAdExtractionException
 
-
+import from datetime import datetime
+from processor.process_unprocessed import reconstruct_completion_msg
 
 import structlog
 from structlog import get_logger
@@ -49,70 +47,13 @@ def chunked_iterable(iterable, size):
         yield chunk
 
 
-@dataclass
-class DumpPath:
-    # Root path of data dir
-    base_path: Path
-    location: str
-    host_hostname: str
-    container_hostname: str
-    time_started: int
-
-    @staticmethod
-    def from_batch(base_path: Path, batch: Batch) -> DumpPath:
-        return DumpPath(base_path=base_path,
-                        location=batch.location,
-                        host_hostname=batch.server_hostname,
-                        container_hostname=batch.server_container,
-                        time_started=batch.start_timestamp,
-                        )
-
-    def to_path(self) -> Path:
-        """Converts the DumpPath into a traversable path on the filesystem"""
-        return (
-            self.base_path
-                .joinpath(self.location.state_name)
-                .joinpath(f"{self.host_hostname}#{self.container_hostname}")
-                .joinpath(str(self.time_started))
-        )
-
-
-@dataclass
-class FullAdPath:
-    """Specific file of ad info"""
-    dump_dir_info: DumpPath
-    bot_name: str
-    attempt: int
-    request_timestamp: int
-    video_watched: str
-    ext: str
-    file_path: Path
-
-    @staticmethod
-    def from_dump_path_and_file(dump_path: DumpPath, file_path: Path) -> FullAdPath:
-        (bot_name,
-         attempt,
-         request_timestamp,
-         video_watched) = file_path.stem.split("#")
-        ext = file_path.suffix
-
-        return FullAdPath(dump_dir_info=dump_path,
-                          bot_name=bot_name,
-                          attempt=int(attempt),
-                          request_timestamp=int(request_timestamp),
-                          video_watched=video_watched,
-                          ext=ext,
-                          file_path=file_path)
-
-
-class AdFile:
-    def __init__(self, filename: pathlib.Path):
-        (self.bot_name,
-         self.try_num,
-         self.ad_seen_at,
-         self.video_watched) = filename.stem.split("#")
-
 from typing import List
+
+def batch_is_old(dump_path: DumpPath):
+    age_of_batch = datetime.now() - datetime.utcfromtimestamp(dump_path.time_started)
+    age_hours_threshold = 24
+    batch_age_hours = age_of_batch.days * 24 + age_of_batch.seconds / 60 / 60
+    return batch_age_hours >= age_hours_threshold
 
 
 class BatchProcessor:
@@ -144,6 +85,60 @@ class BatchProcessor:
             self.process_batch_synced(batch_data)
         elif event == BotEvents.PROCESS:
             self.process_all_unprocessed_but_synced()
+        elif event == BotEvents.PROCESS_UNPROCESSED:
+            self.process_all_unprocessed_from_unprocessed_dir()
+
+    def process_all_unprocessed_from_unprocessed_dir(self):
+        """Scan and process batch data synced in the unprocessed directory"""
+        dump_path = Path(self.dump_path)
+        unprocessed_dirs = [x.parent for x in dump_path.glob("*/*#*/*/*.log")]
+        unprocessed: Path
+
+        err = False
+        for unprocessed in unprocessed_dirs:
+            unprocessed_dir = DumpPath(unprocessed)
+            completion_msg = reconstruct_completion_msg(unprocessed_dir)
+
+            # Batch has not completed yet. Partial sync
+            if not unprocessed.joinpath("done").exists():
+                self.logger.info(f"Not done syncing yet. dir={unprocessed.as_posix()}")
+                continue
+            self.logger.info(f"processing directory, dir={unprocessed.as_posix()}")
+            # If batch exists use its data
+            loc = self.get_location_info(completion_msg.location)
+
+            # use 1st batch
+            batch = Batch.objects.filter(location__state_name=unprocessed_dir.location,
+                                         start_timestamp=unprocessed_dir.time_started,
+                                         server_hostname=unprocessed_dir.host_hostname,
+                                         server_container=unprocessed_dir.container_hostname,
+                                         ).first()
+            # Does not exist yet
+            if batch is None:
+                batch = Batch(
+                    start_timestamp = completion_msg.run_id,
+                    completed_timestamp = completion_msg.timestamp,
+                    time_taken = completion_msg.timestamp - completion_msg.run_id,
+                    location = loc,
+                    total_bots = completion_msg.bots_in_batch,
+                    server_hostname = completion_msg.host_hostname,
+                    server_container = completion_msg.hostname,
+                    external_ip = completion_msg.external_ip,
+                    status = Constants.BATCH_COMPLETED,
+                    synced = True,
+                    processed = False,
+                    total_requests = completion_msg.requests,
+                    total_ads_found = completion_msg.ads_found,
+                    video_list_size = completion_msg.video_list_size,
+                    )
+                batch.save()
+            if batch.processed:
+                self.logger.info("Won't reprocess a batch. Mark as unprocessed to force")
+                continue
+
+            sync_data = batch.into_batch_synced()
+            self.process_batch_synced(sync_data)
+
 
     def process_all_unprocessed_but_synced(self):
         failed = False
@@ -154,7 +149,7 @@ class BatchProcessor:
                 batch_synced = unprocessed.into_batch_synced()
                 # Process the synced batch
                 self.process_batch_synced(batch_synced)
-            except Exception as e:
+            except Exception:
                 self.logger.exception(f"error processing redone batch: batch_id: {unprocessed.id}")
                 failed = True
                 continue
@@ -439,7 +434,7 @@ class BatchProcessor:
                 wl.ad_skip_duration = parsed_ad.skip_offset
                 wl.ad_system = parsed_ad.ad_system
                 wl.save()
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
                 error_files.append(video)
         if error_files:
@@ -458,8 +453,8 @@ class BatchProcessor:
                     vid = Videos.objects.external(parsed_ad.video_id)
                     vid.watched_as_ad += 1
                     vid.save()
-            except Exception as e:
-                self.logger.error("Cannot parse the vast file. No Ad information was found", file=video)
+            except Exception:
+                self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video)
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
@@ -476,7 +471,7 @@ class BatchProcessor:
     def save_ad_information_v2(self, dump_path: DumpPath):
         videos = dump_path.to_path().glob("*.json")
         ad_list: List[str] = []
-        for video in videos:
+        for _ in videos:
             self.logger.error("Version 2 parsing not implemented for ad format parsing")
             raise Exception("V2 Ad info parsing not implemented")
         self.save_video_metadata(ad_list, is_ad=True)
@@ -503,8 +498,8 @@ class BatchProcessor:
                     vid = Videos.objects.external(ad_video)
                     vid.watched_as_ad += 1
                     vid.save()
-            except Exception as e:
-                self.logger.info("Cannot parse the v3 ad file. No Ad information was found")
+            except Exception:
+                self.logger.exception("Cannot parse the v3 ad file. No Ad information was found")
         self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v3(self, dump_path: DumpPath, batch: Batch):
