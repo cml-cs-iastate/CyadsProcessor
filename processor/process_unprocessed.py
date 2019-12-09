@@ -125,6 +125,14 @@ def reconstruct_completion_msg(dump_dir: DumpPath) -> BatchCompleted:
                                   )
         num_bots = batch.total_bots
         external_ip = batch.external_ip
+    except Batch.MultipleObjectsReturned:
+        batch = Batch.objects.filter(location__state_name=dump_dir.location,
+                                  start_timestamp=dump_dir.time_started,
+                                  server_hostname=dump_dir.host_hostname,
+                                  server_container=dump_dir.container_hostname,
+                                  )[0]
+        num_bots = batch.total_bots
+        external_ip = batch.external_ip
     except Batch.DoesNotExist as e:
         logfile = next(dump_dir.to_path().glob("bots_*.log"))
         external_ip = "0.0.0.0"
