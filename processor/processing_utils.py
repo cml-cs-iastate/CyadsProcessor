@@ -3,7 +3,10 @@ import pathlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from processor.models import Batch
+from processor.models import Batch, Locations
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -16,13 +19,14 @@ class DumpPath:
     time_started: int
 
     @staticmethod
-    def from_ad_dir(ad_dir: Path):
+    def from_ad_dir(ad_dir: Path) -> DumpPath:
         """ad_dir: Directory where ad files are stored for specific batch"""
         parents = ad_dir.parents
-        start_timestamp = int(parents[0])
-        server_hostname, container_hostname = parents[1].stem.split("#")
-        location = parents[2]
-        base_path = parents[3]
+        start_timestamp = int(ad_dir.name)
+        logger.info(f"servercontainer: {parents[0].name}")
+        server_hostname, container_hostname = parents[0].name.split("#")
+        location = parents[1].name
+        base_path = parents[2]
 
         return DumpPath(base_path=base_path,
                         location=location,
@@ -33,8 +37,9 @@ class DumpPath:
 
     @staticmethod
     def from_batch(base_path: Path, batch: Batch) -> DumpPath:
+        #location: Locations = Locations.objects.get(batch.location)
         return DumpPath(base_path=base_path,
-                        location=batch.location,
+                        location=batch.location.state_name,
                         host_hostname=batch.server_hostname,
                         container_hostname=batch.server_container,
                         time_started=batch.start_timestamp,
@@ -66,7 +71,7 @@ class FullAdPath:
         (bot_name,
          attempt,
          request_timestamp,
-         video_watched) = file_path.stem.split("#")
+         video_watched) = file_path.name.split("#")
         ext = file_path.suffix
 
         return FullAdPath(dump_dir_info=dump_path,
@@ -83,7 +88,7 @@ class AdFile:
         (self.bot_name,
          self.try_num,
          self.ad_seen_at,
-         self.video_watched) = filename.stem.split("#")
+         self.video_watched) = filename.name.split("#")
 
 
 class DumpFile:
@@ -91,4 +96,4 @@ class DumpFile:
         (self.bot_name,
          self.try_num,
          self.ad_seen_at,
-         self.video_watched) = filename.stem.split("#")
+         self.video_watched) = filename.name.split("#")

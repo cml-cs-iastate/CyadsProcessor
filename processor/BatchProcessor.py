@@ -49,6 +49,7 @@ def chunked_iterable(iterable, size):
 
 from typing import List
 
+
 def batch_is_old(dump_path: DumpPath):
     age_of_batch = datetime.now() - datetime.utcfromtimestamp(dump_path.time_started)
     age_hours_threshold = 24
@@ -97,7 +98,15 @@ class BatchProcessor:
 
         err = False
         for unprocessed in unprocessed_dirs:
-            unprocessed_dir = DumpPath(unprocessed)
+            ad_dir = unprocessed
+            parents = ad_dir.parents
+            start_timestamp = int(ad_dir.name)
+            logger.info(f"servercontainer: {parents[0].name}")
+            server_hostname, container_hostname = parents[0].name.split("#")
+            location = parents[1].name
+            base_path = parents[2]
+
+            unprocessed_dir: DumpPath = DumpPath.from_ad_dir(unprocessed)
             completion_msg = reconstruct_completion_msg(unprocessed_dir)
 
             # Batch has not completed yet. Partial sync
@@ -117,40 +126,42 @@ class BatchProcessor:
             # Does not exist yet
             if batch is None:
                 batch = Batch(
-                    start_timestamp = completion_msg.run_id,
-                    completed_timestamp = completion_msg.timestamp,
-                    time_taken = completion_msg.timestamp - completion_msg.run_id,
-                    location = loc,
-                    total_bots = completion_msg.bots_in_batch,
-                    server_hostname = completion_msg.host_hostname,
-                    server_container = completion_msg.hostname,
-                    external_ip = completion_msg.external_ip,
-                    status = Constants.BATCH_COMPLETED,
-                    synced = True,
-                    processed = False,
-                    total_requests = completion_msg.requests,
-                    total_ads_found = completion_msg.ads_found,
-                    video_list_size = completion_msg.video_list_size,
+                    start_timestamp=completion_msg.run_id,
+                    completed_timestamp=completion_msg.timestamp,
+                    time_taken=completion_msg.timestamp - completion_msg.run_id,
+                    location=loc,
+                    total_bots=completion_msg.bots_started,
+                    server_hostname=completion_msg.host_hostname,
+                    server_container=completion_msg.hostname,
+                    external_ip=completion_msg.external_ip,
+                    status=Constants.BATCH_COMPLETED,
+                    synced=True,
+                    processed=False,
+                    total_requests=completion_msg.requests,
+                    total_ads_found=completion_msg.ads_found,
+                    video_list_size=completion_msg.video_list_size,
                     )
                 batch.save()
             if batch.processed:
-                self.logger.info("Won't reprocess a batch. Mark as unprocessed to force")
+                self.logger.info("Won't reprocess a batch. Mark as unprocessed to force", batch_id=batch.id)
                 continue
 
             sync_data = batch.into_batch_synced()
             self.process_batch_synced(sync_data)
 
+            self.logger.info("successfully processed batch. Moving to processed dir", unprocessed_dir=unprocessed_dir.to_path().as_posix())
             # Copy source data to processed directory
             processed_base_path = Path(self.processed_path)
-            unprocessed_dir = unprocessed.parent
+            unprocessed_dir: Path = unprocessed
             base = unprocessed_dir.parents[2]
             relative_unprocessed_dir = unprocessed_dir.relative_to(base)
-            processed_new_dir = processed_base_path.joinpath(relative_unprocessed_dir)
+            processed_new_dir: Path = processed_base_path.joinpath(relative_unprocessed_dir)
             processed_new_dir.mkdir(parents=True, exist_ok=True)
             shutil.copytree(unprocessed_dir, processed_new_dir, dirs_exist_ok=True)
+            self.logger.info("successfully copied to processed dir. Getting ready to delete copy in unprocessed", unprocessed_dir=unprocessed_dir.as_posix(), processed_dir=processed_new_dir.as_posix())
             # Remove unprocessed data that was copied over
             shutil.rmtree(unprocessed_dir)
-
+            self.logger.info("successfully deleted to unprocessed dir for batch", unprocessed_dir=unprocessed_dir.as_posix())
 
     def process_all_unprocessed_but_synced(self):
         failed = False
@@ -276,7 +287,7 @@ class BatchProcessor:
         return loc
 
     def process_new_batch(self, batch: Batch):
-        dump_path: DumpPath = DumpPath.from_batch(base_path=Path(self.dump_path), batch=batch)
+        dump_path = DumpPath.from_batch(base_path=Path(self.dump_path), batch=batch)
         if not dump_path.to_path().is_dir():
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing: ', dump_path.to_path().as_posix())

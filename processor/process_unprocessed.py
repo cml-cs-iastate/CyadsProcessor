@@ -158,11 +158,11 @@ def reconstruct_completion_msg(dump_dir: DumpPath) -> BatchCompleted:
     last_request = last_request_time(dump_dir.to_path())
 
     # Count size of the video list bots watched
-    with open("political_videos.csv") as f:
+    with dump_dir.to_path().joinpath("political_videos.csv").open() as f:
         video_list_size = sum(1 for _ in f)
     completion_msg = BatchCompleted(status=BatchCompletionStatus.COMPLETE, hostname=dump_dir.container_hostname,
                                     run_id=dump_dir.time_started,
-                                    external_ip=external_ip, bots_in_batch=num_bots,
+                                    external_ip=external_ip, bots_started=num_bots,
                                     requests=total_requests, host_hostname=dump_dir.host_hostname,
                                     location=dump_dir.location, ads_found=ad_count, timestamp=last_request,
                                     video_list_size=video_list_size,
