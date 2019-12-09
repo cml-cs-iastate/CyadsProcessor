@@ -145,8 +145,11 @@ class BatchProcessor:
             if batch.processed:
                 self.logger.info("Won't reprocess a batch. Mark as unprocessed to force", batch_id=batch.id)
                 continue
-
-            sync_data = batch.into_batch_synced()
+            try:
+                sync_data = batch.into_batch_synced()
+            except AssertionError as a:
+                self.logger.exception("batch not marked as synced", batch_id=batch.id)
+                continue
             self.process_batch_synced(sync_data)
 
             self.logger.info("successfully processed batch. Moving to processed dir", unprocessed_dir=unprocessed_dir.to_path().as_posix())
