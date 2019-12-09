@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.8
 
 ENV DJANGO_SETTINGS_MODULE=CyadsProcessor.settings
 ENV TOPIC_SUBSCRIPTION_NAME=dev

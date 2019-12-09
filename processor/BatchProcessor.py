@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import shutil
 import json
+import os
+from pathlib import Path
+import itertools
 
 from typing import DefaultDict
 from collections import defaultdict
 
 from more_itertools import chunked
 
-import os
 from django.core.exceptions import ObjectDoesNotExist
 
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
@@ -19,9 +22,6 @@ from processor.vast import Parser
 from video_metadata import VideoMetadata
 from django.core.exceptions import MultipleObjectsReturned
 
-from pathlib import Path
-
-import itertools
 
 from django.db.models import QuerySet
 
@@ -62,6 +62,7 @@ class BatchProcessor:
     def __init__(self):
         self.api_key = os.getenv('GOOGLE_KEY')
         self.dump_path: str = os.getenv('DUMP_PATH')
+        self.processed_path: str = os.getenv("PROCESSED_PATH")
 
     def reset_database_connection(self):
         from django import db
@@ -100,7 +101,7 @@ class BatchProcessor:
             completion_msg = reconstruct_completion_msg(unprocessed_dir)
 
             # Batch has not completed yet. Partial sync
-            if not unprocessed.joinpath("done").exists():
+            if not unprocessed.joinpath("done").exists() and not batch_is_old(unprocessed_dir):
                 self.logger.info(f"Not done syncing yet. dir={unprocessed.as_posix()}")
                 continue
             self.logger.info(f"processing directory, dir={unprocessed.as_posix()}")
@@ -138,6 +139,17 @@ class BatchProcessor:
 
             sync_data = batch.into_batch_synced()
             self.process_batch_synced(sync_data)
+
+            # Copy source data to processed directory
+            processed_base_path = Path(self.processed_path)
+            unprocessed_dir = unprocessed.parent
+            base = unprocessed_dir.parents[2]
+            relative_unprocessed_dir = unprocessed_dir.relative_to(base)
+            processed_new_dir = processed_base_path.joinpath(relative_unprocessed_dir)
+            processed_new_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(unprocessed_dir, processed_new_dir, dirs_exist_ok=True)
+            # Remove unprocessed data that was copied over
+            shutil.rmtree(unprocessed_dir)
 
 
     def process_all_unprocessed_but_synced(self):

@@ -2,12 +2,11 @@ from __future__ import annotations
 from typing import Iterator
 import io
 import re
-import bot_api
+from messaging.payloads.BatchPayload import BatchCompleted, BatchCompletionStatus
 import json
 
 import pathlib
 from more_itertools import ilen
-from bot_api import (BatchCompleted, BatchCompletionStatus)
 from datetime import datetime
 from processor.processing_utils import DumpPath, DumpFile
 from processor.models import Batch
