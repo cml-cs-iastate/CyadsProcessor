@@ -436,7 +436,6 @@ class BatchProcessor:
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
         """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
         error_files = []
-        watchlogs_to_save = []
 
         videos = dump_path.to_path().glob('Bot*.xml')
         for video in videos:
@@ -465,12 +464,6 @@ class BatchProcessor:
             except Exception:
                 self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video.as_posix())
                 error_files.append(video)
-
-        # save rest
-        bulk_len = len(watchlogs_to_save)
-        self.logger.info(f"saving rest of bulk watchlogs", n=bulk_len)
-        Ad_Found_WatchLog.objects.bulk_create(watchlogs_to_save)
-        self.logger.info(f"saved rest of bulk watchlogs", n=bulk_len)
 
         if error_files:
             raise WatchLogAdExtractionException(error_files=error_files)
