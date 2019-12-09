@@ -38,6 +38,8 @@ class BotEvents(str, Enum):
     PROCESS = "process"
     # Test event
     TEST = "test"
+    # Process data in unprocessed directory
+    PROCESS_UNPROCESSED = "process_unprocessed"
 
 
 class BatchStarted:

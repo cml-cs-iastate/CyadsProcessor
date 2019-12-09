@@ -49,7 +49,7 @@ class BatchSubscriber:
         try:
             processor = BatchProcessor()
             # ack a call to process all batches incase of continuous exceptions and long running tasks
-            if event == event.PROCESS:
+            if event == event.PROCESS or event == event.PROCESS_UNPROCESSED:
                 message.ack()
             processor.process(batch_data=message.data, event=event)
             message.ack()
