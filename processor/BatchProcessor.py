@@ -492,7 +492,7 @@ class BatchProcessor:
             except Exception:
                 self.logger.exception("Cannot parse the vast file. No Ad information was found", file=video)
 
-      self.save_video_metadata(ad_list, is_ad=True)
+        self.save_video_metadata(ad_list, is_ad=True)
 
     def save_watchlog_information_v2(self, dump_path: DumpPath, batch: Batch):
         self.logger.error("Version 2 parsing not implemented for ad format parsing")
