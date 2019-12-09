@@ -71,7 +71,7 @@ class FullAdPath:
         (bot_name,
          attempt,
          request_timestamp,
-         video_watched) = file_path.name.split("#")
+         video_watched) = file_path.stem.split("#")
         ext = file_path.suffix
 
         return FullAdPath(dump_dir_info=dump_path,
@@ -88,7 +88,7 @@ class AdFile:
         (self.bot_name,
          self.try_num,
          self.ad_seen_at,
-         self.video_watched) = filename.name.split("#")
+         self.video_watched) = filename.stem.split("#")
 
 
 class DumpFile:
@@ -96,4 +96,4 @@ class DumpFile:
         (self.bot_name,
          self.try_num,
          self.ad_seen_at,
-         self.video_watched) = filename.name.split("#")
+         self.video_watched) = filename.stem.split("#")
