@@ -139,13 +139,19 @@ def reconstruct_completion_msg(dump_dir: DumpPath) -> BatchCompleted:
 
         with logfile.open() as f:
             for line in f:
-                jline = json.loads(line)
                 try:
-                    num_bots = int(jline["num_bots"])
-                    print("batch:", dump_dir, "has", num_bots, "bot(s)")
+                    jline = json.loads(line)
+                    num_bots = int(jline["bots_started"])
+                    video_list_size = int(jline["video_list_size"])
+                    print("batch:", dump_dir, " has", num_bots, " bot(s)", "with ", video_list_size, " videos")
                     break
                 except KeyError:
                     continue
+                except json.JSONDecodeError:
+                    continue
+            else:
+                raise Exception(f"No start msg present in log file. directory={logfile.as_posix()}")
+
 
     version: int = determine_ad_format_version(dump_dir.to_path())
 
@@ -165,9 +171,6 @@ def reconstruct_completion_msg(dump_dir: DumpPath) -> BatchCompleted:
     total_requests = ad_count + non_ads
     last_request = last_request_time(dump_dir.to_path())
 
-    # Count size of the video list bots watched
-    with dump_dir.to_path().joinpath("political_videos.csv").open() as f:
-        video_list_size = sum(1 for _ in f)
     completion_msg = BatchCompleted(status=BatchCompletionStatus.COMPLETE, hostname=dump_dir.container_hostname,
                                     run_id=dump_dir.time_started,
                                     external_ip=external_ip, bots_started=num_bots,
