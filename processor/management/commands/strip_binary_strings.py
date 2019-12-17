@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from processor.models import Videos, Channels, CheckStatus
+from processor.models import Videos, Channels, CheckStatus, Categories
 import re
 
 class Command(BaseCommand):
@@ -14,6 +14,14 @@ class Command(BaseCommand):
         vid: Videos
         count = 0
         matches = 0
+        for cat in Categories.objects.all():
+            got_match = False
+            if binary_str_regex.match(cat.name):
+                cat.name = cat.name[2:-1]
+                got_match = True
+            if got_match:
+                cat.save()
+
         for vid in Videos.objects.all():
             got_match = False
             if binary_str_regex.match(vid.title):
