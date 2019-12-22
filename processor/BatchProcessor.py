@@ -98,73 +98,84 @@ class BatchProcessor:
 
         err = False
         for unprocessed in unprocessed_dirs:
-            ad_dir = unprocessed
-            parents = ad_dir.parents
-            start_timestamp = int(ad_dir.name)
-            logger.info(f"servercontainer: {parents[0].name}")
-            server_hostname, container_hostname = parents[0].name.split("#")
-            location = parents[1].name
-            base_path = parents[2]
-
-            unprocessed_dir: DumpPath = DumpPath.from_ad_dir(unprocessed)
-            completion_msg = reconstruct_completion_msg(unprocessed_dir)
-
-            # Batch has not completed yet. Partial sync
-            if not unprocessed.joinpath("done").exists() and not batch_is_old(unprocessed_dir):
-                self.logger.info(f"Not done syncing yet. dir={unprocessed.as_posix()}")
-                continue
-            self.logger.info(f"processing directory, dir={unprocessed.as_posix()}")
-            # If batch exists use its data
-            loc = self.get_location_info(completion_msg.location)
-
-            # use 1st batch
-            batch = Batch.objects.filter(location__state_name=unprocessed_dir.location,
-                                         start_timestamp=unprocessed_dir.time_started,
-                                         server_hostname=unprocessed_dir.host_hostname,
-                                         server_container=unprocessed_dir.container_hostname,
-                                         ).first()
-            # Does not exist yet
-            if batch is None:
-                batch = Batch(
-                    start_timestamp=completion_msg.run_id,
-                    completed_timestamp=completion_msg.timestamp,
-                    time_taken=completion_msg.timestamp - completion_msg.run_id,
-                    location=loc,
-                    total_bots=completion_msg.bots_started,
-                    server_hostname=completion_msg.host_hostname,
-                    server_container=completion_msg.hostname,
-                    external_ip=completion_msg.external_ip,
-                    status=Constants.BATCH_COMPLETED,
-                    synced=True,
-                    processed=False,
-                    total_requests=completion_msg.requests,
-                    total_ads_found=completion_msg.ads_found,
-                    video_list_size=completion_msg.video_list_size,
-                    )
-                batch.save()
-            if batch.processed:
-                self.logger.info("Won't reprocess a batch. Mark as unprocessed to force", batch_id=batch.id)
-                continue
             try:
-                sync_data = batch.into_batch_synced()
-            except AssertionError as a:
-                self.logger.exception("batch not marked as synced", batch_id=batch.id)
-                continue
-            self.process_batch_synced(sync_data)
+                ad_dir = unprocessed
+                parents = ad_dir.parents
+                start_timestamp = int(ad_dir.name)
+                logger.info(f"servercontainer: {parents[0].name}")
+                server_hostname, container_hostname = parents[0].name.split("#")
+                location = parents[1].name
+                base_path = parents[2]
 
-            self.logger.info("successfully processed batch. Moving to processed dir", unprocessed_dir=unprocessed_dir.to_path().as_posix())
-            # Copy source data to processed directory
-            processed_base_path = Path(self.processed_path)
-            unprocessed_dir: Path = unprocessed
-            base = unprocessed_dir.parents[2]
-            relative_unprocessed_dir = unprocessed_dir.relative_to(base)
-            processed_new_dir: Path = processed_base_path.joinpath(relative_unprocessed_dir)
-            processed_new_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(unprocessed_dir, processed_new_dir, dirs_exist_ok=True)
-            self.logger.info("successfully copied to processed dir. Getting ready to delete copy in unprocessed", unprocessed_dir=unprocessed_dir.as_posix(), processed_dir=processed_new_dir.as_posix())
-            # Remove unprocessed data that was copied over
-            shutil.rmtree(unprocessed_dir)
-            self.logger.info("successfully deleted to unprocessed dir for batch", unprocessed_dir=unprocessed_dir.as_posix())
+                unprocessed_dir: DumpPath = DumpPath.from_ad_dir(unprocessed)
+                completion_msg = reconstruct_completion_msg(unprocessed_dir)
+
+                # Batch has not completed yet. Partial sync
+                if not unprocessed.joinpath("done").exists() and not batch_is_old(unprocessed_dir):
+                    self.logger.info(f"Not done syncing yet. dir={unprocessed.as_posix()}")
+                    continue
+                self.logger.info(f"processing directory, dir={unprocessed.as_posix()}")
+                # If batch exists use its data
+                loc = self.get_location_info(completion_msg.location)
+
+                # use 1st batch
+                batch = Batch.objects.filter(location__state_name=unprocessed_dir.location,
+                                             start_timestamp=unprocessed_dir.time_started,
+                                             server_hostname=unprocessed_dir.host_hostname,
+                                             server_container=unprocessed_dir.container_hostname,
+                                             ).first()
+                # Does not exist yet
+                if batch is None:
+                    batch = Batch(
+                        start_timestamp=completion_msg.run_id,
+                        completed_timestamp=completion_msg.timestamp,
+                        time_taken=completion_msg.timestamp - completion_msg.run_id,
+                        location=loc,
+                        total_bots=completion_msg.bots_started,
+                        server_hostname=completion_msg.host_hostname,
+                        server_container=completion_msg.hostname,
+                        external_ip=completion_msg.external_ip,
+                        status=Constants.BATCH_COMPLETED,
+                        synced=True,
+                        processed=False,
+                        total_requests=completion_msg.requests,
+                        total_ads_found=completion_msg.ads_found,
+                        video_list_size=completion_msg.video_list_size,
+                        )
+                    batch.save()
+                batch.synced = True
+                batch.save()
+                if batch.processed:
+                    self.logger.info("Won't reprocess a batch. Mark as unprocessed to force", batch_id=batch.id)
+                    continue
+                try:
+                    sync_data = batch.into_batch_synced()
+                except AssertionError as a:
+                    self.logger.exception("batch not marked as synced", batch_id=batch.id)
+                    continue
+                self.process_batch_synced(sync_data)
+
+                self.logger.info("successfully processed batch. Moving to processed dir", unprocessed_dir=unprocessed_dir.to_path().as_posix())
+                # Copy source data to processed directory
+                processed_base_path = Path(self.processed_path)
+                unprocessed_dir: Path = unprocessed
+                base = unprocessed_dir.parents[2]
+                relative_unprocessed_dir = unprocessed_dir.relative_to(base)
+                processed_new_dir: Path = processed_base_path.joinpath(relative_unprocessed_dir)
+                processed_new_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.copytree(unprocessed_dir, processed_new_dir, dirs_exist_ok=True)
+                    self.logger.info("successfully copied to processed dir. Getting ready to delete copy in unprocessed", unprocessed_dir=unprocessed_dir.as_posix(), processed_dir=processed_new_dir.as_posix())
+                    # Remove unprocessed data that was copied over
+                    # shutil.rmtree(unprocessed_dir)
+                    # self.logger.info("successfully deleted to unprocessed dir for batch", unprocessed_dir=unprocessed_dir.as_posix())
+                except Exception as e:
+                    self.logger.exception("copying failed for batch", unprocessed=unprocessed.as_posix(), batch_id=batch.id)
+
+            except Exception:
+                self.logger.exception("Error occurred while processing batch", unprocessed=unprocessed.as_posix())
+                continue
+
 
     def process_all_unprocessed_but_synced(self):
         failed = False
@@ -539,8 +550,12 @@ class BatchProcessor:
         videos = dump_path.to_path().glob("Bot*.txt")
         for video in videos:
             view_path: FullAdPath = FullAdPath.from_dump_path_and_file(dump_path, video)
-            with view_path.file_path.open("r") as f:
-                video_ad = f.read()
+            try:
+                with view_path.file_path.open("r") as f:
+                    video_ad = f.read()
+            except FileNotFoundError:
+                self.logger.error("file is present, but doesn't exist?", file=view_path.file_path.as_posix())
+                continue
             if not video_ad:
                 error_files.append(video)
                 continue
