@@ -15,7 +15,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
-    UsLocations
+    UsLocations, CheckStatus
 from processor.processing_utils import DumpPath, FullAdPath
 from processor.vast import Parser
 
@@ -29,7 +29,8 @@ from processor.exceptions import WatchLogAdExtractionException
 
 from datetime import datetime
 from processor.process_unprocessed import reconstruct_completion_msg
-
+from processor.tasks import
+from downloader.tasks import record_download_video
 import structlog
 from structlog import get_logger
 from structlog.stdlib import LoggerFactory
@@ -64,6 +65,7 @@ class BatchProcessor:
         self.api_key = os.getenv('GOOGLE_KEY')
         self.dump_path: str = os.getenv('DUMP_PATH')
         self.processed_path: str = os.getenv("PROCESSED_PATH")
+        self.download_path: str = os.getenv("AD_ARCHIVE_FILESTORE_DIR")
 
     def reset_database_connection(self):
         from django import db
@@ -389,6 +391,14 @@ class BatchProcessor:
             else:
                 vid.watched_as_video = vid.watched_as_video + times_seen
             vid.save()
+
+            # Download videos
+            if vid.check_status.value == CheckStatus.NOT_CHECKED.value:
+                self.logger.info(f"Downloading video: {vid.url}")
+                record_download_video(vid.url, self.download_path)
+                vid.save()
+                self.logger.info(f"Downloaded video: {vid.url}, status={vid.check_status}")
+
         self.logger.info("Finished checking if videos already saved")
 
         self.logger.info("need to lookup videos", number=len(not_viewed), videos=list(not_viewed.keys()))
@@ -443,6 +453,7 @@ class BatchProcessor:
         for ad_view_path in ad_view_paths:
             video_list.append(FullAdPath.from_dump_path_and_file(dump_path, ad_view_path).video_watched)
         self.save_video_metadata(video_list)
+
 
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
         """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
