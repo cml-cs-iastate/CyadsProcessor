@@ -124,7 +124,7 @@ def video_download(adfile: AdFile, url: str, download_dir: str):
 
 
 def record_download_video(url: str, download_dir: str):
-    """Download and record the video given by `url`"""
+    """Download and record the video given by `url` Must be in db already"""
     adfile = AdFile()
     adfile.collection_type = CollectionType.CYADS.value
     try:
@@ -137,13 +137,13 @@ def record_download_video(url: str, download_dir: str):
         vid.save()
         return vid
     except MissingVideoError:
-        vid: Videos = Videos.objects.missing(vid_url=url)
+        vid: Videos = Videos.objects.filter(url=url).first()
         vid.checked = True
         vid.check_status = CheckStatus.MISSING.value
         vid.save()
         return vid
     except PrivateVideoError:
-        vid: Videos = Videos.objects.missing(vid_url=url)
+        vid: Videos = Videos.objects.filter(url=url).first()
         vid.checked = True
         vid.check_status = CheckStatus.PRIVATE.value
         vid.save()
