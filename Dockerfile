@@ -13,6 +13,7 @@ ENV DATABASE_HOST=localhost
 ENV DATABASE_USER=root
 ENV DATABASE_PASSWORD=root
 ENV SECRET_KEY=asdas
+RUN apt-get update && apt-get install -y ffmpeg
 RUN rm -rf logs/*
 
 
