@@ -229,6 +229,7 @@ class CheckStatus(Enum):
     FOUND = "FOUND"
     MISSING = "MISSING"
     ERROR = "ERROR"
+    PRIVATE = "PRIVATE"
 
 
 class CollectionType(Enum):

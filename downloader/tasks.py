@@ -24,7 +24,17 @@ class DuplicateVideoError(Exception):
 
 
 class MissingVideoError(Exception):
-    """A video is no longer available to download"""
+    """A video is no longer available to download because it is taken down"""
+
+    def __init__(self, message, url: str = None):
+        self.message = message
+        self.url: str = url
+
+    def __str__(self):
+        return f"{self.message}: url={self.url}"
+
+class PrivateVideoError(Exception):
+    """A video is no longer available to download because it is private"""
 
     def __init__(self, message, url: str = None):
         self.message = message
@@ -95,6 +105,8 @@ def video_download(adfile: AdFile, url: str, download_dir: str):
         except youtube_dl.utils.DownloadError as e:
             if "video is unavailable" in e.args[0]:
                 raise MissingVideoError("Missing video", url=url) from e
+            elif "video is private" in e.args[0]:
+                raise PrivateVideoError("Private video", url=url) from e
             else:
                 raise e
         extractor = result["extractor"]
@@ -128,6 +140,12 @@ def record_download_video(url: str, download_dir: str):
         vid: Videos = Videos.objects.missing(vid_url=url)
         vid.checked = True
         vid.check_status = CheckStatus.MISSING.value
+        vid.save()
+        return vid
+    except PrivateVideoError:
+        vid: Videos = Videos.objects.missing(vid_url=url)
+        vid.checked = True
+        vid.check_status = CheckStatus.PRIVATE.value
         vid.save()
         return vid
     except DuplicateVideoError as e:

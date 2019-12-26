@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):    # Only download youtube videos
         # Only download ads
-        download_dir = os.environ("AD_ARCHIVE_FILESTORE_DIR")
+        download_dir = os.environ["AD_ARCHIVE_FILESTORE_DIR"]
         assert download_dir is not None
 
         youtube_urls = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11, watched_as_ad__gte=1,
@@ -23,9 +23,10 @@ class Command(BaseCommand):
         vid: Videos
         for vid in youtube_urls:
             try:
-                record_download_video(vid.url, download_dir)
-                vid.save()
-                print(f"downloaded ad to: {vid.AdFile_ID.ad_filepath} for video: {vid.url}")
+                video_with_adfile = record_download_video(vid.url, download_dir)
+                video_with_adfile.save()
+                if video_with_adfile.check_status == CheckStatus.FOUND.value:
+                    print(f"downloaded ad to: {video_with_adfile.AdFile_ID.ad_filepath} for video: {video_with_adfile.url}")
             except Exception as e:
                 print(f"Got error while downloading video {vid.url}: {e}")
         self.stdout.write(self.style.SUCCESS("Downloaded ads"))
