@@ -10,6 +10,7 @@ class Download(TestCase):
     missing_vid = "MISSING_VID"
     present_vid = "kPBtDHiHJuM"
     double_vid = "ZwibqZ044Ac"
+    private_vid = "C5MgLA_qQhY"
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -22,8 +23,19 @@ class Download(TestCase):
         double = Videos.objects.external(vid_url=self.double_vid)
         double.save()
 
+        private = Videos.objects.missing(vid_url=self.private_vid)
+        private.save()
+
     def tearDown(self):
         self.temp_dir.cleanup()
+
+    def test_private_vid_marked_as_private(self):
+        record_download_video(self.private_vid, self.temp_dir.name)
+        vid: Videos = Videos.objects.get(url=self.private_vid)
+        self.assertEqual(CheckStatus[vid.check_status], CheckStatus.PRIVATE)
+        self.assertEqual(vid.checked, True)
+        vid.save()
+        print(vid)
 
     def test_duplicate_videos_raises_errors(self):
         record_download_video(self.double_vid, self.temp_dir.name)
