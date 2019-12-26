@@ -391,13 +391,6 @@ class BatchProcessor:
                 vid.watched_as_video = vid.watched_as_video + times_seen
             vid.save()
 
-            # Download videos
-            if vid.check_status.value == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >=1:
-                self.logger.info(f"Downloading video: {vid.url}")
-                record_download_video(vid.url, self.download_path)
-                vid.save()
-                self.logger.info(f"Downloaded video: {vid.url}, status={vid.check_status}")
-
         self.logger.info("Finished checking if videos already saved")
 
         self.logger.info("need to lookup videos", number=len(not_viewed), videos=list(not_viewed.keys()))
@@ -441,6 +434,15 @@ class BatchProcessor:
                 else:
                     vid.watched_as_video = vid.watched_as_video + viewed_videos[metadata.id]
                 vid.save()
+
+                # Download ads only
+                should_download = vid.check_status == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >= 1
+                if should_download:
+                    self.logger.info(f"Downloading video: {vid.url}")
+                    record_download_video(vid.url, self.download_path)
+                    vid.save()
+                    self.logger.info(f"Downloaded video: {vid.url}, status={vid.check_status}")
+
         self.logger.info("Finished grabbing YT metadata for videos not saved")
 
         self.logger.info(f"Made {actual_queries} youtube queries. Max should be: {max_queries}")
