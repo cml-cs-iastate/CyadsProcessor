@@ -392,7 +392,7 @@ class BatchProcessor:
             vid.save()
 
             # Download videos
-            if vid.check_status.value == CheckStatus.NOT_CHECKED.value:
+            if vid.check_status.value == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >=1:
                 self.logger.info(f"Downloading video: {vid.url}")
                 record_download_video(vid.url, self.download_path)
                 vid.save()
