@@ -439,9 +439,9 @@ class BatchProcessor:
                 should_download = vid.check_status == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >= 1
                 if should_download:
                     self.logger.info(f"Downloading video: {vid.url}")
-                    record_download_video(vid.url, self.download_path)
-                    vid.save()
-                    self.logger.info(f"Downloaded video: {vid.url}, status={vid.check_status}")
+                    vid_with_adfile = record_download_video(vid.url, self.download_path)
+                    vid_with_adfile.save()
+                    self.logger.info(f"Downloaded video: {vid_with_adfile.url}, status={vid_with_adfile.check_status}")
 
         self.logger.info("Finished grabbing YT metadata for videos not saved")
 
