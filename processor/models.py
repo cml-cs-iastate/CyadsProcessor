@@ -225,10 +225,10 @@ class Channels(models.Model):
 
 
 class CheckStatus(Enum):
-    NOT_CHECKED = 0
-    FOUND = 1
-    MISSING = 2
-    ERROR = 3
+    NOT_CHECKED = "NOT_CHECKED"
+    FOUND = "FOUND"
+    MISSING = "MISSING"
+    ERROR = "ERROR"
 
 
 class CollectionType(Enum):
@@ -240,6 +240,11 @@ class AdFile(models.Model):
     id = models.AutoField(db_column="AdFile_ID", primary_key=True)
     ad_filepath = models.TextField(null=True)
     collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType])
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f' {self.id!r}, {self.ad_filepath!r},'
+                f' {self.collection_type!r})')
 
 
 class VideoManager(models.Manager):
@@ -253,7 +258,7 @@ class VideoManager(models.Manager):
         channel = Channels.objects.missing()
         category = Categories.objects.missing()
         vid, created = self.get_or_create(url=vid_url, channel=channel, category=category)
-        vid.check_status = CheckStatus.MISSING
+        vid.check_status = CheckStatus.MISSING.value
         return vid
 
 
@@ -273,6 +278,19 @@ class Videos(models.Model):
                                     default=CheckStatus.NOT_CHECKED.value)
 
     objects = VideoManager()
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}('
+                f'{self.id!r}, {self.url!r}'
+                f' {self.title!r}, {self.channel!r}'
+                f' {self.description!r}, {self.keywords!r}'
+                f' {self.watched_as_ad!r}, {self.watched_as_video!r}'
+                f' {self.AdFile_ID!r}, {self.checked!r}'
+                f' {self.time_checked!r}, {self.check_status!r}'
+                f')'
+                )
 
 
 class Ad_Found_WatchLog(models.Model):
