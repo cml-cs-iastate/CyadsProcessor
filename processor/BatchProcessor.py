@@ -29,7 +29,6 @@ from processor.exceptions import WatchLogAdExtractionException
 
 from datetime import datetime
 from processor.process_unprocessed import reconstruct_completion_msg
-from processor.tasks import
 from downloader.tasks import record_download_video
 import structlog
 from structlog import get_logger
