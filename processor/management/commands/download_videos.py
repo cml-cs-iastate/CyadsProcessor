@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):    # Only download youtube videos
         # Only download ads
-        download_dir = os.environ("AD_ARCHIVE_FILESTORE_DIR")
+        download_dir = os.environ["AD_ARCHIVE_FILESTORE_DIR"]
         assert download_dir is not None
 
         youtube_urls = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11, watched_as_ad__gte=1,
