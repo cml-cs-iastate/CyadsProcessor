@@ -1,42 +1,14 @@
-from celery import shared_task
 
 import logging
 
 import youtube_dl
 from processor.models import Videos, AdFile, CheckStatus, CollectionType
-from django.db.models.functions import Length
 
 from pathlib import PurePosixPath, Path
 from urllib.parse import unquote, urlparse
 import re
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task(acks_late=True, name="tasks.cyads_video_download")
-def download_videos_from_db():
-    # Only download youtube videos
-    # Only download ads
-    youtube_urls = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11, watched_as_ad__gte=1,
-                                                                         checked=False)
-
-    vid: Videos
-    for vid in youtube_urls:
-        try:
-            full_url = f"https://www.youtube.com/embed/{vid.url}?rel=0&hl=en&cc_lang_pref=en"
-
-            # Exception raised if unique constrain violated
-            adfile = AdFile(collection_type=CollectionType.CYADS)
-
-            video_download(adfile, full_url)
-            vid.AdFile_ID = adfile
-            # Only save if no errors
-            adfile.save()
-            vid.checked = True
-            vid.check_status = CheckStatus.FOUND
-            vid.save()
-        except Exception as e:
-            logger.exception(f"Got error while downloading video {full_url}: {e}")
 
 
 class DuplicateVideoError(Exception):
