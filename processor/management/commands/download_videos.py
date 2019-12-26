@@ -23,9 +23,10 @@ class Command(BaseCommand):
         vid: Videos
         for vid in youtube_urls:
             try:
-                record_download_video(vid.url, download_dir)
-                vid.save()
-                print(f"downloaded ad to: {vid.AdFile_ID.ad_filepath} for video: {vid.url}")
+                video_with_adfile = record_download_video(vid.url, download_dir)
+                video_with_adfile.save()
+                if video_with_adfile.check_status == CheckStatus.FOUND.value:
+                    print(f"downloaded ad to: {video_with_adfile.AdFile_ID.ad_filepath} for video: {video_with_adfile.url}")
             except Exception as e:
                 print(f"Got error while downloading video {vid.url}: {e}")
         self.stdout.write(self.style.SUCCESS("Downloaded ads"))
