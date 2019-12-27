@@ -423,9 +423,9 @@ class BatchProcessor:
                     vid.category = cat
                     vid.channel = channel
 
-                    vid.keywords = str(metadata.keywords).encode('utf-8')
-                    vid.description = str(metadata.description).encode('utf-8')
-                    vid.title = str(metadata.title).encode('utf-8')
+                    vid.keywords = metadata.keywords.encode('utf-8')
+                    vid.description = metadata.description.encode('utf-8')
+                    vid.title = metadata.title.encode('utf-8')
 
                 # Use youtube video id as key to lookup total times seen in batch
                 times_viewed = not_viewed[metadata.id]
@@ -454,7 +454,6 @@ class BatchProcessor:
         for ad_view_path in ad_view_paths:
             video_list.append(FullAdPath.from_dump_path_and_file(dump_path, ad_view_path).video_watched)
         self.save_video_metadata(video_list)
-
 
     def save_watchlog_information_v1(self, dump_path: DumpPath, batch: Batch):
         """raises: WatchLogProcessingException if any ad files unable to extract ad info"""
