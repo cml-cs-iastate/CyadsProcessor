@@ -100,7 +100,7 @@ class Batch(models.Model):
     start_timestamp = models.BigIntegerField()
     completed_timestamp = models.BigIntegerField(default=-1)
     time_taken = models.IntegerField(default=-1)
-    location = models.ForeignKey(Locations, on_delete=models.CASCADE)
+    location = models.ForeignKey(Locations, on_delete=models.PROTECT)
     total_bots = models.IntegerField(default=0)
     server_hostname = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON')
     server_container = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON')
@@ -146,11 +146,11 @@ class CategoryManager(models.Manager):
 
     def from_valid_category_and_name(self, category_id: int, name: str) -> Categories:
         try:
-            cat, created = self.get_or_create(cat_id=category_id, name=str(name).encode('utf-8'))
+            cat, created = self.get_or_create(cat_id=category_id, name=name.encode('utf-8'))
             return cat
         except MultipleObjectsReturned:
             # Return first
-            return self.filter(cat_id=category_id, name=str(name).encode('utf-8')).first()
+            return self.filter(cat_id=category_id, name=name.encode('utf-8')).first()
 
     def missing(self) -> Categories:
         cat, created = self.get_or_create(cat_id=MISSING_ID, name=MISSING_NAME)
@@ -188,11 +188,11 @@ class ChannelManager(models.Manager):
 
     def from_valid_channel_and_name(self, channel_id: int, name: str) -> Channels:
         try:
-            ch, created = self.get_or_create(channel_id=channel_id, name=str(name).encode('utf-8'))
+            ch, created = self.get_or_create(channel_id=channel_id, name=name.encode('utf-8'))
             return ch
         except MultipleObjectsReturned:
             # Use first
-            return self.filter(channel_id=channel_id, name=str(name).encode('utf-8')).first()
+            return self.filter(channel_id=channel_id, name=name.encode('utf-8')).first()
 
     def missing(self) -> Channels:
         chan, created = self.get_or_create(channel_id=MISSING_ID, name=MISSING_NAME)
@@ -266,13 +266,13 @@ class VideoManager(models.Manager):
 class Videos(models.Model):
     url = models.TextField()
     title = models.TextField(default='')
-    category = models.ForeignKey(Categories, on_delete=models.CASCADE)
-    channel = models.ForeignKey(Channels, on_delete=models.CASCADE)
+    category = models.ForeignKey(Categories, on_delete=models.PROTECT)
+    channel = models.ForeignKey(Channels, on_delete=models.PROTECT)
     description = models.TextField(default='')
     keywords = models.TextField(default='')
     watched_as_ad = models.IntegerField(default=0)
     watched_as_video = models.IntegerField(default=0)
-    AdFile_ID = models.ForeignKey(db_column="AdFile_ID", to=AdFile, on_delete=models.SET_NULL, null=True)
+    AdFile_ID = models.ForeignKey(db_column="AdFile_ID", to=AdFile, on_delete=models.PROTECT, null=True)
     checked = models.BooleanField(null=False, default=False)
     time_checked = models.DateTimeField(null=True, auto_now=True)
     check_status = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CheckStatus],
@@ -295,12 +295,12 @@ class Videos(models.Model):
 
 
 class Ad_Found_WatchLog(models.Model):
-    batch = models.ForeignKey(Batch, on_delete=models.CASCADE)
-    bot = models.ForeignKey(Bots, on_delete=models.CASCADE)
-    video_watched = models.ForeignKey(Videos, on_delete=models.CASCADE, related_name='video_watched')
+    batch = models.ForeignKey(Batch, on_delete=models.PROTECT)
+    bot = models.ForeignKey(Bots, on_delete=models.PROTECT)
+    video_watched = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='video_watched')
     attempt = models.IntegerField(default=0)
     request_timestamp = models.BigIntegerField(default=0)
-    ad_video = models.ForeignKey(Videos, on_delete=models.CASCADE, related_name='ad_video')
+    ad_video = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='ad_video')
     ad_source = models.CharField(max_length=50, default='youtube')
     ad_duration = models.IntegerField(default=0)
     ad_skip_duration = models.IntegerField(default=0)
