@@ -445,6 +445,7 @@ class BatchProcessor:
                     self.logger.info(f"Downloading video: {vid.url}")
                     vid_with_adfile = record_download_video(vid.url, self.download_path)
                     vid_with_adfile.save()
+                    vid.check_status = CheckStatus.FOUND.value
                     self.logger.info(f"Downloaded video: {vid_with_adfile.url}, status={vid_with_adfile.check_status}")
 
         self.logger.info("Finished grabbing YT metadata for videos not saved")
