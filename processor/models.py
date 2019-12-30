@@ -5,6 +5,7 @@ from django.db import models
 from enum import Enum
 
 from messaging.payloads.BatchPayload import BatchCompletionStatus, BatchSyncComplete, BatchSynced, BatchCompleted
+from processor.encoding_helpers import convert_non_ascii_string_to_encodeable_ascii
 
 # Magic constants for db models
 # Using throughout models which don't allow null to indicate missing
@@ -145,12 +146,14 @@ class Bots(models.Model):
 class CategoryManager(models.Manager):
 
     def from_valid_category_and_name(self, category_id: int, name: str) -> Categories:
+        encoded_name = convert_non_ascii_string_to_encodeable_ascii(name)
         try:
-            cat, created = self.get_or_create(cat_id=category_id, name=name.encode('utf-8'))
+
+            cat, created = self.get_or_create(cat_id=category_id, name=encoded_name)
             return cat
         except MultipleObjectsReturned:
             # Return first
-            return self.filter(cat_id=category_id, name=name.encode('utf-8')).first()
+            return self.filter(cat_id=category_id, name=encoded_name).first()
 
     def missing(self) -> Categories:
         cat, created = self.get_or_create(cat_id=MISSING_ID, name=MISSING_NAME)
@@ -187,12 +190,13 @@ class Categories(models.Model):
 class ChannelManager(models.Manager):
 
     def from_valid_channel_and_name(self, channel_id: int, name: str) -> Channels:
+        encoded_name = convert_non_ascii_string_to_encodeable_ascii(name)
         try:
-            ch, created = self.get_or_create(channel_id=channel_id, name=name.encode('utf-8'))
+            ch, created = self.get_or_create(channel_id=channel_id, name=encoded_name)
             return ch
         except MultipleObjectsReturned:
             # Use first
-            return self.filter(channel_id=channel_id, name=name.encode('utf-8')).first()
+            return self.filter(channel_id=channel_id, name=encoded_name).first()
 
     def missing(self) -> Channels:
         chan, created = self.get_or_create(channel_id=MISSING_ID, name=MISSING_NAME)

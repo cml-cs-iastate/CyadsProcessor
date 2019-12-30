@@ -3,7 +3,7 @@ import pathlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from processor.models import Batch, Locations
+from processor.models import Batch
 
 import logging
 logger = logging.getLogger(__name__)
