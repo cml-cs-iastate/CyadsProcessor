@@ -170,6 +170,9 @@ class Categories(models.Model):
 
     objects = CategoryManager()
 
+    def __repr__(self):
+        return f"<Categories({self.id}): cat_id={self.cat_id}, name={self.name}>"
+
     def mark_missing(self):
         self.cat_id = MISSING_ID
         self.name = MISSING_NAME
@@ -212,6 +215,9 @@ class Channels(models.Model):
     name = models.CharField(max_length=255)
     description = models.CharField(max_length=255, default='')
     objects = ChannelManager()
+
+    def __repr__(self):
+        return f"<Channels: id={self.id}, channel_id={self.channel_id}, name={self.name}, description={self.description}>"
 
     def is_external(self) -> bool:
         return self.name == EXTERNAL_NAME and self.channel_id == EXTERNAL_ID
@@ -284,12 +290,13 @@ class Videos(models.Model):
 
     objects = VideoManager()
     def __str__(self):
-        return self.__repr__()
+        return repr(self)
 
     def __repr__(self):
         return (f'{self.__class__.__name__}('
                 f'{self.id!r}, {self.url!r}'
                 f' {self.title!r}, {self.channel!r}'
+                f' {self.category!r}'
                 f' {self.description!r}, {self.keywords!r}'
                 f' {self.watched_as_ad!r}, {self.watched_as_video!r}'
                 f' {self.AdFile_ID!r}, {self.checked!r}'
@@ -309,3 +316,6 @@ class Ad_Found_WatchLog(models.Model):
     ad_duration = models.IntegerField(default=0)
     ad_skip_duration = models.IntegerField(default=0)
     ad_system = models.CharField(max_length=255, default='')
+
+    def __repr__(self):
+        return f"<AdFoundWatchLog({self.id}): batch={self.batch.id}, bot={self.bot.id}, video_watched={self.video_watched.id}, ad_video={self.ad_video.id}, {self.request_timestamp=}, {self.attempt=}"
