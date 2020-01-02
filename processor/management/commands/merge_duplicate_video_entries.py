@@ -44,7 +44,10 @@ class Command(BaseCommand):
             for vid in dups:
                 if vid.AdFile_ID is not None:
                     # No duplicate adfile entries for same video
-                    assert adfile_id is not None
+                    try:
+                        assert adfile_id is not None
+                    except AssertionError:
+                        raise AssertionError(f"Video: {vid!r} and dest_vid={dest_id!r} both have an AdFile entry")
                     dest_id = vid
                     adfile_id = vid.AdFile_ID
                     checked = True
