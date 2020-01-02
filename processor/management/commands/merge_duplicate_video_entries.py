@@ -36,7 +36,6 @@ class Command(BaseCommand):
             # Sum all counts
             watched_as_ad = 0
             watched_as_video = 0
-            breakpoint()
             adfile_id = None
             checked: bool = False
             check_status = CheckStatus.NOT_CHECKED.value
