@@ -36,18 +36,20 @@ class Command(BaseCommand):
             # Sum all counts
             watched_as_ad = 0
             watched_as_video = 0
+            breakpoint()
             adfile_id = None
             checked: bool = False
             check_status = CheckStatus.NOT_CHECKED.value
 
             vid: Videos
             for vid in dups:
+                print("ENTERED", repr(vid), "adfile=", adfile_id)
                 if vid.AdFile_ID is not None:
                     # No duplicate adfile entries for same video
                     try:
-                        assert adfile_id is not None
+                        assert adfile_id is None
                     except AssertionError:
-                        raise AssertionError(f"Video: {vid!r} and dest_vid={dest_id!r} both have an AdFile entry")
+                        raise AssertionError(f"Video: {vid!r} and dest_vid={dest_id.id}, {dest_id.AdFile_ID}, {dest_id.AdFile_ID.__dict__}, {dest_id.url} both have an AdFile entry")
                     dest_id = vid
                     adfile_id = vid.AdFile_ID
                     checked = True
