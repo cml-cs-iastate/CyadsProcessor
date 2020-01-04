@@ -42,7 +42,6 @@ class Command(BaseCommand):
 
             vid: Videos
             for vid in dups:
-                print("ENTERED", repr(vid), "adfile=", adfile_id)
                 if vid.AdFile_ID is not None:
                     # No duplicate adfile entries for same video
                     try:
