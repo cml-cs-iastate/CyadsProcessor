@@ -46,6 +46,28 @@ class PrivateVideoError(Exception):
         return f"{self.message}: url={self.url}"
 
 
+class UserRemovedVideoError(Exception):
+    """A video is no longer available to download because it was removed by the user"""
+
+    def __init__(self, message, url: str = None):
+        self.message = message
+        self.url: str = url
+
+    def __str__(self):
+        return f"{self.message}: url={self.url}"
+
+
+class AccountTerminationVideoError(Exception):
+    """A video is no longer available to download because the associated account was terminated"""
+
+    def __init__(self, message, url: str = None):
+        self.message = message
+        self.url: str = url
+
+    def __str__(self):
+        return f"{self.message}: url={self.url}"
+
+
 def video_download(url: str, download_dir: str) -> Path:
     """Download video from ad url"""
 
@@ -106,6 +128,10 @@ def video_download(url: str, download_dir: str) -> Path:
                 raise MissingVideoError("Missing video", url=url) from e
             elif "video is private" in e.args[0]:
                 raise PrivateVideoError("Private video", url=url) from e
+            elif "removed by the user" in e.args[0]:
+                raise UserRemovedVideoError("User removed video", url=url) from e
+            elif "account associated with this video has been terminated" in e.args[0]:
+                raise AccountTerminationVideoError("Missing video due to account termination", url=url) from e
             else:
                 raise e
         extractor = result["extractor"]
@@ -175,5 +201,17 @@ def record_download_video(url: str, base_download_dir: str) -> Videos:
         vid: Videos = Videos.objects.filter(url=url).first()
         vid.checked = True
         vid.check_status = CheckStatus.PRIVATE.value
+        vid.save()
+        return vid
+    except UserRemovedVideoError:
+        vid: Videos = Videos.objects.filter(url=url).first()
+        vid.checked = True
+        vid.check_status = CheckStatus.USER_REMOVED.value
+        vid.save()
+        return vid
+    except AccountTerminationVideoError:
+        vid: Videos = Videos.objects.filter(url=url).first()
+        vid.checked = True
+        vid.check_status = CheckStatus.ACCOUNT_TERMINATED.value
         vid.save()
         return vid

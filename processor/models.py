@@ -240,6 +240,9 @@ class CheckStatus(Enum):
     MISSING = "MISSING"
     ERROR = "ERROR"
     PRIVATE = "PRIVATE"
+    USER_REMOVED = "USER_REMOVED"
+    ACCOUNT_TERMINATED = "ACCOUNT_TERMINATED"
+
 
 
 class CollectionType(Enum):
