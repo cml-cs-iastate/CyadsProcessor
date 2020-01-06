@@ -422,10 +422,7 @@ class BatchProcessor:
                 else:
                     cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
-                    vid = Videos()
-                    vid.url = metadata.id
-                    vid.category = cat
-                    vid.channel = channel
+                    vid = Videos.objects.get_or_create(url=metadata.id, category=cat, channel=channel)
 
                     vid.keywords = convert_non_ascii_list_to_encodeable_ascii(metadata.keywords)
                     vid.description = convert_non_ascii_string_to_encodeable_ascii(metadata.description)
@@ -440,7 +437,7 @@ class BatchProcessor:
                 vid.save()
 
                 # Download ads only
-                should_download = vid.check_status == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >= 1
+                should_download = vid.check_status != CheckStatus.FOUND.value and vid.watched_as_ad >= 1
                 if should_download:
                     self.logger.info(f"Downloading video: {vid.url}")
                     vid_with_adfile = record_download_video(vid.url, self.download_path)
