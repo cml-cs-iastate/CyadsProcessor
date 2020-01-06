@@ -437,7 +437,7 @@ class BatchProcessor:
                 vid.save()
 
                 # Download ads only
-                should_download = vid.check_status == CheckStatus.NOT_CHECKED.value and vid.watched_as_ad >= 1
+                should_download = vid.check_status != CheckStatus.FOUND.value and vid.watched_as_ad >= 1
                 if should_download:
                     self.logger.info(f"Downloading video: {vid.url}")
                     vid_with_adfile = record_download_video(vid.url, self.download_path)
