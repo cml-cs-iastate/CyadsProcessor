@@ -422,10 +422,7 @@ class BatchProcessor:
                 else:
                     cat = Categories.objects.from_valid_category_and_name(metadata.category_id, metadata.category_name)
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
-                    vid = Videos()
-                    vid.url = metadata.id
-                    vid.category = cat
-                    vid.channel = channel
+                    vid = Videos.objects.get_or_create(url=metadata.id, category=cat, channel=channel)
 
                     vid.keywords = convert_non_ascii_list_to_encodeable_ascii(metadata.keywords)
                     vid.description = convert_non_ascii_string_to_encodeable_ascii(metadata.description)
