@@ -13,7 +13,7 @@ def reconstruct_utf8_list_from_str_utf8_bstr_saved_as_latin1_swedish(text) -> Li
     # assert has list repr beginning and end
     assert text[0] == "["
     assert text[-1] == "]"
-    bstr_list_escaped = f'b"{text}"'
+    bstr_list_escaped = f'b"""{text}"""'
     bstr_list = literal_eval(bstr_list_escaped)
     assert isinstance(bstr_list, bytes)
     # b"['foo', 'bar']"
@@ -34,7 +34,7 @@ def convert_non_ascii_string_to_encodeable_ascii(text: str) -> str:
 def reconstruct_utf8_str_from_str_utf8_bstr_also_latin1_swedish(text: str) -> str:
     """Code execution possible. Converts byte string string converted to ascii to a string utf8 original """
     # assert has list repr beginning and end
-    bstr_string_escaped = f'b"{text}"'
+    bstr_string_escaped = f'b"""{text}"""'
     bstr_string = literal_eval(bstr_string_escaped)
     assert isinstance(bstr_string, bytes)
     # b"foo"
