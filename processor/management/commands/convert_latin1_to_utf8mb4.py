@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         vid: Videos
         print("exec")
-        youtube_vids = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11, pk=257)
+        youtube_vids = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11)
         print("query exec")
         for vid in youtube_vids:
             print(f"enter id: {vid.id}")
