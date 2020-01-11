@@ -13,6 +13,7 @@ import datetime
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from pathlib import Path
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -21,7 +22,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', "ASDF")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')
 
@@ -129,6 +130,9 @@ STATIC_URL = '/static/'
 
 TEMPLATE_DIRS = (os.path.join(BASE_DIR,  'templates'),)
 
+log_initial_name = Path(".").resolve().joinpath("logs").joinpath(f"processor{datetime.datetime.today().date()}.log")
+log_initial_name.touch(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -144,7 +148,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'logs/processor'+ datetime.date.today().__str__() + '.log',
+            'filename': log_initial_name.as_posix(),
             'formatter': 'verbose',
             'maxBytes': 2048
         },
