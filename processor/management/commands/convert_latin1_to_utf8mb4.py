@@ -12,13 +12,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         vid: Videos
-        print("exec")
         youtube_vids = Videos.objects.annotate(url_len=Length("url")).filter(url_len=11)
-        print("query exec")
         for vid in youtube_vids:
             print(f"enter id: {vid.id}")
             utf8mb4_title = reconstruct_utf8_str_from_str_utf8_bstr_also_latin1_swedish(vid.title)
             utf8m4_description = reconstruct_utf8_str_from_str_utf8_bstr_also_latin1_swedish(vid.description)
             utf8m4_keywords = reconstruct_utf8_list_from_str_utf8_bstr_saved_as_latin1_swedish(vid.keywords)
             print(f"{vid.id=}, url={vid.url}, {utf8mb4_title=}, {utf8m4_description=}, {utf8m4_keywords=}")
-        self.stdout.write(self.style.SUCCESS("Successfully removed b-strings from channels and videos"))
+            vid.title = utf8mb4_title
+            vid.description = utf8m4_description
+            vid.keywords = utf8m4_keywords
+            vid.save()
+        self.stdout.write(self.style.SUCCESS("Successfully transformed b-strings videos"))
