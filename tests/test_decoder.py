@@ -193,3 +193,6 @@ http://www.discover.org.au/subscribe
 ✅ Your SUPPORT of this Christian ministry is GREATLY appreciated.
 """
     assert reconstruct_utf8_str_from_str_utf8_bstr_also_latin1_swedish(test_str) == answer
+
+def test_nonenglish_case1():
+    answer = """🇪🇷 🇪🇹 Eritrea delegation arrives in Ethiopia ahead of landmark talks | Al Jazeera English"""
