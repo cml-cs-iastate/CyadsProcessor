@@ -4,7 +4,7 @@ mysqlclient
 python-dateutil
 google-api-python-client>=1.7.11
 requests>=2.22
-youtube-dl==2019.11.28
+youtube-dl==2020.03.08
 beautifulsoup4>=4.6.0
 tenacity>=4.7
 lxml >=4.1.1
