@@ -110,6 +110,13 @@ GOOGLE_PROJECT_ID=cyads-203819 \
 DATABASE_PASSWORD= \
 DATABASE_USER=root 
 
+## New env vars with google extension db
+GOOGLE_CYADS_PROCESSOR_DB_NAME='cyads_processor'
+GOOGLE_CYADS_PROCESSOR_DB_USERNAME='root'
+GOOGLE_CYADS_PROCESSOR_DB_PASSWORD="<password for accessing db>"
+GOOGLE_CYADS_PROCESSOR_DB_HOSTNAME='35.202.112.86'
+
+
 Finally Run the following command.
 
 python manage.py runserver 8000
