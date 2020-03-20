@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ["127.0.0.1","localhost", "cyads.misc.iastate.edu", "0.0.0.0"]
 INSTALLED_APPS = [
     'downloader.apps.DownloaderConfig',
     'processor.apps.ProcessorConfig',
+    'ad_extension_pull.apps.AdExtensionPullConfig',
     'messaging.apps.MessagingConfig',
     'dashboard.apps.DashboardConfig',
     'django.contrib.admin',
@@ -85,6 +86,16 @@ DATABASES = {
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': os.getenv('DATABASE_HOST'),
         'PORT': os.getenv('DATABASE_PORT', '3306'),
+    },
+
+    # Ad extension database
+    'ad_extension': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_NAME', 'cyads_processor'),
+        'USER': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_USERNAME', 'root'),
+        'PASSWORD': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PASSWORD'),
+        'HOST': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_HOSTNAME', '35.202.112.86'),
+        'PORT': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PORT', '3306')
     }
 }
 
@@ -188,3 +199,6 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
+
+
+DATABASE_ROUTERS = ['ad_extension_pull.router.AdExtensionRouter']

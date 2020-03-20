@@ -16,6 +16,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations, CheckStatus
+from ad_extension_pull.views import process_videos_collected_from_extension
 from processor.processing_utils import DumpPath, FullAdPath
 from processor.encoding_helpers import convert_non_ascii_list_to_encodeable_ascii, \
     convert_non_ascii_string_to_encodeable_ascii
@@ -39,7 +40,6 @@ structlog.configure(logger_factory=LoggerFactory())
 import json
 
 logger = get_logger()
-
 
 
 def chunked_iterable(iterable, size):
@@ -90,6 +90,9 @@ class BatchProcessor:
         elif event == BotEvents.BATCH_SYNCED:
             batch_data = BatchSynced.from_json(batch_data)
             self.process_batch_synced(batch_data)
+
+            # Get the extension db videos processed as well
+            process_videos_collected_from_extension()
         elif event == BotEvents.PROCESS:
             self.process_all_unprocessed_but_synced()
         elif event == BotEvents.PROCESS_UNPROCESSED:
