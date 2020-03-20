@@ -16,7 +16,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchCompleted, BatchSynced
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations, CheckStatus
-from ad_extension_pull.views import process_videos_collected_from_extension
 from processor.processing_utils import DumpPath, FullAdPath
 from processor.encoding_helpers import convert_non_ascii_list_to_encodeable_ascii, \
     convert_non_ascii_string_to_encodeable_ascii
@@ -75,6 +74,7 @@ class BatchProcessor:
         db.close_old_connections()
 
     def process(self, batch_data, event: BotEvents):
+        from ad_extension_pull.views import process_videos_collected_from_extension
 
         # needs to be done because long idle connections might have been closed by mysql server
         self.reset_database_connection()
