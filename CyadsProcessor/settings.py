@@ -21,7 +21,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', "adsfasdf")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')
 
@@ -191,8 +191,8 @@ LOGGING = {
 }
 
 # celery
-BROKER_HOST = os.environ["BROKER_HOST"]
-BROKER_PASSWORD = os.environ["BROKER_PASSWORD"]
+BROKER_HOST = os.getenv("BROKER_HOST", "localhost")
+BROKER_PASSWORD = os.getenv("BROKER_PASSWORD", "")
 BROKER_DB = "0"
 CELERY_BROKER_URL = f'redis://:{BROKER_PASSWORD}@{BROKER_HOST}:6379/{BROKER_DB}'
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
