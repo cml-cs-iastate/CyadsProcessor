@@ -20,8 +20,6 @@ def process_videos_collected_from_extension():
     unproccessed_extension_log: ProcessorAddsViaExtension
     for unproccessed_extension_log in unprocessed_extension_vids:
         vid_id = unproccessed_extension_log.ad_video_id
-        video: Videos
-        video, created = Videos.objects.get_or_create(url=vid_id)
 
         if not video.checked:
             batch_processor = BatchProcessor()
