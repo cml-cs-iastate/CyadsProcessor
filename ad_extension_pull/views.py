@@ -1,8 +1,17 @@
 from .models import ProcessorAddsViaExtension
 from processor.models import Videos
 from processor.BatchProcessor import BatchProcessor
+from django.http import HttpResponse
+
+
+
 from structlog import get_logger
 logger = get_logger()
+
+
+def view_process_videos_collected_from_extension(request):
+    process_videos_collected_from_extension()
+    return HttpResponse("processed ad extension videos")
 
 
 def process_videos_collected_from_extension():

@@ -22,7 +22,7 @@ from downloader.download import DownloadProcessor
 import downloader
 from downloader import views
 from processor.views import process, process_all, test
-from ad_extension_pull.views import process_videos_collected_from_extension
+from ad_extension_pull.views import view_process_videos_collected_from_extension
 
 urlpatterns = [
     path('', include('dashboard.urls')),
@@ -31,7 +31,7 @@ urlpatterns = [
     path("batch/<int:batch_id>/reprocess/", process, kwargs={'force': True}, name="reprocess"),
     path("process_all/", process_all, name="process_all"),
     path("test/<int:number>/", test, name="test"),
-    path("ad_extension_process_videos", process_videos_collected_from_extension, name="ad_extension_video_process"),
+    path("ad_extension_process_videos", view_process_videos_collected_from_extension, name="ad_extension_video_process"),
 ]
 
 
