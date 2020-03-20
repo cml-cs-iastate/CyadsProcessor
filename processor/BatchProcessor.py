@@ -41,7 +41,6 @@ import json
 logger = get_logger()
 
 
-
 def chunked_iterable(iterable, size):
     it = iter(iterable)
     while True:
@@ -75,6 +74,7 @@ class BatchProcessor:
         db.close_old_connections()
 
     def process(self, batch_data, event: BotEvents):
+        from ad_extension_pull.views import process_videos_collected_from_extension
 
         # needs to be done because long idle connections might have been closed by mysql server
         self.reset_database_connection()
@@ -90,6 +90,9 @@ class BatchProcessor:
         elif event == BotEvents.BATCH_SYNCED:
             batch_data = BatchSynced.from_json(batch_data)
             self.process_batch_synced(batch_data)
+
+            # Get the extension db videos processed as well
+            process_videos_collected_from_extension()
         elif event == BotEvents.PROCESS:
             self.process_all_unprocessed_but_synced()
         elif event == BotEvents.PROCESS_UNPROCESSED:

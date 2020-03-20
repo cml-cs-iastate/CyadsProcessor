@@ -22,7 +22,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', "ASDF")
+SECRET_KEY = os.getenv('SECRET_KEY', "adsfasdf")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')
 
@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ["127.0.0.1","localhost", "cyads.misc.iastate.edu", "0.0.0.0"]
 INSTALLED_APPS = [
     'downloader.apps.DownloaderConfig',
     'processor.apps.ProcessorConfig',
+    'ad_extension_pull.apps.AdExtensionPullConfig',
     'messaging.apps.MessagingConfig',
     'dashboard.apps.DashboardConfig',
     'django.contrib.admin',
@@ -89,6 +90,16 @@ DATABASES = {
         'OPTIONS': {
             'charset': 'utf8mb4',
         }
+    },
+
+    # Ad extension database
+    'ad_extension': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_NAME', 'cyads_processor'),
+        'USER': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_USERNAME', 'root'),
+        'PASSWORD': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PASSWORD'),
+        'HOST': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_HOSTNAME', '35.202.112.86'),
+        'PORT': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PORT', '3306')
     }
 }
 
@@ -185,3 +196,16 @@ LOGGING = {
 
     },
 }
+
+# celery
+BROKER_HOST = os.getenv("BROKER_HOST", "localhost")
+BROKER_PASSWORD = os.getenv("BROKER_PASSWORD", "")
+BROKER_DB = "0"
+CELERY_BROKER_URL = f'redis://:{BROKER_PASSWORD}@{BROKER_HOST}:6379/{BROKER_DB}'
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+
+
+DATABASE_ROUTERS = ['ad_extension_pull.router.AdExtensionRouter']
