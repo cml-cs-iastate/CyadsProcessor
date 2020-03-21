@@ -68,6 +68,17 @@ class AccountTerminationVideoError(Exception):
         return f"{self.message}: url={self.url}"
 
 
+class LiveStreamUnavailableError(Exception):
+    """A live stream is no longer available to download"""
+
+    def __init__(self, message, url: str = None):
+        self.message = message
+        self.url: str = url
+
+    def __str__(self):
+        return f"{self.message}: url={self.url}"
+
+
 def video_download(url: str, download_dir: str) -> Path:
     """Download video from ad url"""
 
@@ -132,6 +143,8 @@ def video_download(url: str, download_dir: str) -> Path:
                 raise UserRemovedVideoError("User removed video", url=url) from e
             elif "account associated with this video has been terminated" in e.args[0]:
                 raise AccountTerminationVideoError("Missing video due to account termination", url=url) from e
+            elif "This live stream recording is not available" in e.args[0]:
+                raise LiveStreamUnavailableError("This live stream recording is not available", url=url) from e
             else:
                 raise e
         extractor = result["extractor"]
@@ -210,6 +223,12 @@ def record_download_video(url: str, base_download_dir: str) -> Videos:
         vid.save()
         return vid
     except AccountTerminationVideoError:
+        vid: Videos = Videos.objects.filter(url=url).first()
+        vid.checked = True
+        vid.check_status = CheckStatus.ACCOUNT_TERMINATED.value
+        vid.save()
+        return vid
+    except LiveStreamUnavailableError:
         vid: Videos = Videos.objects.filter(url=url).first()
         vid.checked = True
         vid.check_status = CheckStatus.ACCOUNT_TERMINATED.value

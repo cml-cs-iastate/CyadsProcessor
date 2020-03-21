@@ -242,7 +242,7 @@ class CheckStatus(Enum):
     PRIVATE = "PRIVATE"
     USER_REMOVED = "USER_REMOVED"
     ACCOUNT_TERMINATED = "ACCOUNT_TERMINATED"
-
+    LIVE_STREAM_REMOVED = "LIVE_STREAM_REMOVED"
 
 
 class CollectionType(Enum):
@@ -292,6 +292,7 @@ class Videos(models.Model):
                                     default=CheckStatus.NOT_CHECKED.value)
 
     objects = VideoManager()
+
     def __str__(self):
         return repr(self)
 
