@@ -26,6 +26,7 @@ from ad_extension_pull.views import view_process_videos_collected_from_extension
 
 urlpatterns = [
     path('', include('dashboard.urls')),
+    path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('admin/', admin.site.urls),
     path("batch/<int:batch_id>/process/", process, kwargs={'force': False}, name="process"),
     path("batch/<int:batch_id>/reprocess/", process, kwargs={'force': True}, name="reprocess"),

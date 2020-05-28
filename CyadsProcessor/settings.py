@@ -14,6 +14,11 @@ import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 from pathlib import Path
+import mimetypes
+mimetypes.init()
+mimetypes.add_type("text/css", ".css", True)
+
+STATIC_URL = '/static/'
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,12 +37,14 @@ ALLOWED_HOSTS = ["127.0.0.1","localhost", "cyads.misc.iastate.edu", "0.0.0.0"]
 # Application definition
 
 INSTALLED_APPS = [
+    'django_extensions',
     'downloader.apps.DownloaderConfig',
     'processor.apps.ProcessorConfig',
     'ad_extension_pull.apps.AdExtensionPullConfig',
     'messaging.apps.MessagingConfig',
     'dashboard.apps.DashboardConfig',
     'django.contrib.admin',
+    'django.contrib.admindocs',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
