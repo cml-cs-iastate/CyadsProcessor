@@ -98,21 +98,22 @@ class Locations(models.Model):
 
 
 class Batch(models.Model):
-    start_timestamp = models.BigIntegerField()
-    completed_timestamp = models.BigIntegerField(default=-1)
-    time_taken = models.IntegerField(default=-1)
+    """Stores info about a batch of bots. Used by :model:`processor.Ad_Found_WatchLog`"""
+    start_timestamp = models.BigIntegerField(help_text="DateTime the batch of bots was started")
+    completed_timestamp = models.BigIntegerField(default=-1, help_text="DateTime the batch of bots finished running")
+    time_taken = models.IntegerField(default=-1, help_text="Time taken for batch to run through video list repetitions")
     location = models.ForeignKey(Locations, on_delete=models.PROTECT)
-    total_bots = models.IntegerField(default=0)
-    server_hostname = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON')
-    server_container = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON')
-    external_ip = models.CharField(max_length=30, default='0.0.0.0')
-    status = models.CharField(max_length=20, default=Constants.BATCH_RUNNING)
-    synced = models.BooleanField(default=False)
-    processed = models.BooleanField(default=False)
-    total_requests = models.IntegerField(default=0)
-    total_ads_found = models.IntegerField(default=0)
-    video_list_size = models.IntegerField(default=550)
-    remarks = models.CharField(max_length=255)
+    total_bots = models.IntegerField(default=0, help_text="Number of bots ran that were part of the batch")
+    server_hostname = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON', help_text="The hostname of the server the bots ran on")
+    server_container = models.CharField(max_length=30, default='NOT_FOUND_IN_JSON', help_text="The docker container hostname (or same as server_hostname if not ran under docker)")
+    external_ip = models.CharField(max_length=30, default='0.0.0.0', help_text="The IP address that YouTube would sees")
+    status = models.CharField(max_length=20, default=Constants.BATCH_RUNNING, help_text="Status of batch, See Constants")
+    synced = models.BooleanField(default=False, help_text="Is the batch data synced to the server yet?")
+    processed = models.BooleanField(default=False, help_text="Has the synced batch data been processed yet?")
+    total_requests = models.IntegerField(default=0, help_text="Number of video requests the entire batch of bots made to YouTube")
+    total_ads_found = models.IntegerField(default=0, help_text="Number of ads shown to the whole batch of bots")
+    video_list_size = models.IntegerField(default=550, help_text="Number of videos in the video list the bots watched")
+    remarks = models.CharField(max_length=255, help_text="Used to indicated any problems with the batch data")
 
     @staticmethod
     def get_batch_by_status(status):
@@ -140,7 +141,11 @@ class Batch(models.Model):
 
 
 class Bots(models.Model):
-    name = models.CharField(max_length=100)
+    """A particular bot in a Batch"""
+    name = models.CharField(max_length=100, help_text="Name given to bots, Keeps bot data from mixing together")
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class CategoryManager(models.Manager):
@@ -165,8 +170,10 @@ class CategoryManager(models.Manager):
 
 
 class Categories(models.Model):
-    cat_id = models.IntegerField()
-    name = models.CharField(max_length=100)
+    """The YouTube category of a :model:`processor.Videos`"""
+
+    cat_id = models.IntegerField(help_text="Numeric category id used by YouTube Data API for each video categories")
+    name = models.CharField(max_length=100, help_text="Name of video category")
 
     objects = CategoryManager()
 
@@ -211,9 +218,10 @@ class ChannelManager(models.Manager):
 
 
 class Channels(models.Model):
-    channel_id = models.TextField()
-    name = models.CharField(max_length=255)
-    description = models.CharField(max_length=255, default='')
+    """The YouTube channel associated with a YouTube :model:`processor.Videos`"""
+    channel_id = models.TextField(help_text="Unique YouTube channel id")
+    name = models.CharField(max_length=255, help_text="Name of the YouTube channel selected by channel owner")
+    description = models.CharField(max_length=255, default='', help_text="Description of channel")
     objects = ChannelManager()
 
     def __repr__(self):
@@ -251,9 +259,11 @@ class CollectionType(Enum):
 
 
 class AdFile(models.Model):
+    """Stores data about where a downloaded video is located in storage"""
     id = models.AutoField(db_column="AdFile_ID", primary_key=True)
-    ad_filepath = models.TextField(null=True)
-    collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType])
+    ad_filepath = models.TextField(null=True, help_text="Relative filepath where downloaded video file is stored")
+    collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType],
+                                       help_text="Which :py:class:`Collection` the video file is part of")
 
     def __repr__(self):
         return (f'{self.__class__.__name__}('
@@ -277,19 +287,20 @@ class VideoManager(models.Manager):
 
 
 class Videos(models.Model):
-    url = models.TextField()
-    title = models.TextField(default='')
+    """Video metadata information"""
+    url = models.TextField(help_text="URL to find video")
+    title = models.TextField(default='', help_text="Title of YouTube video")
     category = models.ForeignKey(Categories, on_delete=models.PROTECT)
     channel = models.ForeignKey(Channels, on_delete=models.PROTECT)
-    description = models.TextField(default='')
-    keywords = models.TextField(default='')
-    watched_as_ad = models.IntegerField(default=0)
-    watched_as_video = models.IntegerField(default=0)
+    description = models.TextField(default='', help_text="The description provided for the YouTube video")
+    keywords = models.TextField(default='', help_text="List of keywords/tags video publisher used for the video")
+    watched_as_ad = models.IntegerField(default=0, help_text=">0 if video was viewed as an ad")
+    watched_as_video = models.IntegerField(default=0, help_text=">0 if video was viewed due to a video request")
     AdFile_ID = models.ForeignKey(db_column="AdFile_ID", to=AdFile, on_delete=models.PROTECT, null=True)
-    checked = models.BooleanField(null=False, default=False)
-    time_checked = models.DateTimeField(null=True, auto_now=True)
+    checked = models.BooleanField(null=False, default=False, help_text="Whether the video entry has been checked and downloaded")
+    time_checked = models.DateTimeField(null=True, auto_now=True, help_text="Datetime the video was checked/downloaded")
     check_status = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CheckStatus],
-                                    default=CheckStatus.NOT_CHECKED.value)
+                                    default=CheckStatus.NOT_CHECKED.value, help_text="What the result of the :py:class:`CheckStatus` is")
 
     objects = VideoManager()
 
@@ -310,16 +321,17 @@ class Videos(models.Model):
 
 
 class Ad_Found_WatchLog(models.Model):
-    batch = models.ForeignKey(Batch, on_delete=models.PROTECT)
-    bot = models.ForeignKey(Bots, on_delete=models.PROTECT)
-    video_watched = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='video_watched')
-    attempt = models.IntegerField(default=0)
-    request_timestamp = models.BigIntegerField(default=0)
-    ad_video = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='ad_video')
-    ad_source = models.CharField(max_length=50, default='youtube')
-    ad_duration = models.IntegerField(default=0)
-    ad_skip_duration = models.IntegerField(default=0)
-    ad_system = models.CharField(max_length=255, default='')
+    """Info related to a particular :model:`Bots` request which yielded an ad :model:`Videos`"""
+    batch = models.ForeignKey(Batch, on_delete=models.PROTECT, help_text="The batch the ad view is part of")
+    bot = models.ForeignKey(Bots, on_delete=models.PROTECT, help_text="The bot the ad request was part of for a particular batch")
+    video_watched = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='video_watched', help_text="The video request in the video list which had an ad view assoicated with it")
+    attempt = models.IntegerField(default=0, help_text="Which repetition of viewing the same video request in the list")
+    request_timestamp = models.BigIntegerField(default=0, help_text="The datetime the video was requested to view on YouTube")
+    ad_video = models.ForeignKey(Videos, on_delete=models.PROTECT, related_name='ad_video', help_text="The ad shown")
+    ad_source = models.CharField(max_length=50, default='youtube', help_text="YouTube hosted ad or externally hosted")
+    ad_duration = models.IntegerField(default=0, help_text="How long the ad is in seconds")
+    ad_skip_duration = models.IntegerField(default=0, help_text="Required time before ad can be skipped")
+    ad_system = models.CharField(max_length=255, default='', help_text="Which ad serving provider the advertiser uses")
 
     def __repr__(self):
         return f"<AdFoundWatchLog({self.id}): batch={self.batch.id}, bot={self.bot.id}, video_watched={self.video_watched.id}, ad_video={self.ad_video.id}, {self.request_timestamp=}, {self.attempt=}"
