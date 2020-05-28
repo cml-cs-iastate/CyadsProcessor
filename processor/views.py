@@ -13,6 +13,20 @@ from structlog import get_logger
 from structlog.stdlib import LoggerFactory
 structlog.configure(logger_factory=LoggerFactory())
 logger = get_logger()
+from processor.models import Videos
+
+def view_gather_video_info_catchup(request):
+    gather_video_info_catchup()
+    return HttpResponse("finished gatching up videos not downloaded")
+
+def gather_video_info_catchup():
+    video: Videos
+    for video in Videos.objects.filter(checked=False, watched_as_ad__gte=0):
+
+        batch_processor = BatchProcessor()
+        batch_processor.save_video_metadata([video.url], is_ad=True)
+        vid_db_id = Videos.objects.get(url=vid_id)
+        logger.info("processed extension video", url=vid_id, vid_db_id=vid_db_id)
 
 
 def process_all(reuqest: HttpRequest) -> HttpResponse:
