@@ -17,8 +17,6 @@ from messaging.payloads.BatchPayload import BotEvents, BatchStarted, BatchComple
 from processor.models import Batch, Constants, Videos, Bots, Ad_Found_WatchLog, Categories, Channels, Locations, \
     UsLocations, CheckStatus
 from processor.processing_utils import DumpPath, FullAdPath
-from processor.encoding_helpers import convert_non_ascii_list_to_encodeable_ascii, \
-    convert_non_ascii_string_to_encodeable_ascii
 from processor.vast import Parser
 
 from video_metadata import VideoMetadata
@@ -427,9 +425,9 @@ class BatchProcessor:
                     channel = Channels.objects.from_valid_channel_and_name(metadata.channel_id, metadata.channel_title)
                     vid, created = Videos.objects.get_or_create(url=metadata.id, category=cat, channel=channel)
 
-                    vid.keywords = convert_non_ascii_list_to_encodeable_ascii(metadata.keywords)
-                    vid.description = convert_non_ascii_string_to_encodeable_ascii(metadata.description)
-                    vid.title = convert_non_ascii_string_to_encodeable_ascii(metadata.title)
+                    vid.keywords = json.dumps(metadata.keywords)
+                    vid.description = metadata.description
+                    vid.title = metadata.title
 
                 # Use youtube video id as key to lookup total times seen in batch
                 times_viewed = not_viewed[metadata.id]
