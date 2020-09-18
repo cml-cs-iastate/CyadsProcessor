@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_datatables'
 ]
 
 MIDDLEWARE = [
@@ -60,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'CyadsProcessor.urls'
@@ -216,3 +219,29 @@ CELERY_TASK_SERIALIZER = 'json'
 
 
 DATABASE_ROUTERS = ['ad_extension_pull.router.AdExtensionRouter']
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework_datatables.renderers.DatatablesRenderer',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_datatables.filters.DatatablesFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_datatables.pagination.DatatablesPageNumberPagination',
+    'PAGE_SIZE': 100,
+}
