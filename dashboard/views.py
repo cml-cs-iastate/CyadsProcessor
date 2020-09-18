@@ -1,23 +1,30 @@
-from django.db.models import Sum, Count
+import datetime
+
+from django.db.models import Sum, Count, Func, DateTimeField
+from django.db.models.functions import TruncDate
 from django.shortcuts import render
 
 from processor.models import Batch, Constants, Ad_Found_WatchLog
 
 
 def index(request):
+    now = datetime.datetime.now()
+    html = f"<html><body>It is now {now}.</body></html>"
 
-    running_batch = Batch.objects.filter(status=Constants.BATCH_RUNNING).order_by('start_timestamp')
-    completed_batch = Batch.objects.filter(status=Constants.BATCH_COMPLETED).order_by('start_timestamp')
-    location_stats = Batch.objects.values('location__state_name').filter(status=Constants.BATCH_COMPLETED)
-    location_stats = location_stats.annotate(total_batches=Count('id'),
-                                             total_ads=Sum('total_ads_found'),
-                                             total_requests=Sum('total_requests')).order_by('-total_batches')
-    youtube_ads = Ad_Found_WatchLog.objects.values('batch_id').filter(ad_source='youtube').annotate(total_ads=Count('batch_id'))
-    external_ads = Ad_Found_WatchLog.objects.values('batch_id').filter(ad_source='external').annotate(total_ads=Count('batch_id'))
+    batches_still_running = Batch.objects.filter(status=Constants.BATCH_RUNNING).count()
 
-    return render(request,'index.html', {'running_batch': running_batch,
-                                         'completed_batch': completed_batch,
-                                         'location_stats': location_stats,
-                                         'youtube_ads': youtube_ads,
-                                         'external_ads': external_ads}
-                  )
+    batches_per_day: int = Batch.objects.filter(status=Constants.BATCH_RUNNING).values("start_timestamp")\
+        .annotate(day=Func('start_timestamp', function="FROM_UNIXTIME", output_field=DateTimeField()))\
+        .values('day').annotate(uniq_day=TruncDate('day'))\
+        .values('uniq_day').distinct().count()
+
+    number_running_locations: int = Batch.objects.filter(status=Constants.BATCH_RUNNING).values("location_id").distinct().count()
+
+    return render(request, 'new_index.html', {"batches_running": batches_still_running,
+                                              "dates_still_running": batches_per_day,
+                                              "locations_number_running": number_running_locations,
+                                              })
+
+
+def completed(request):
+    return render(None, "completed.html")

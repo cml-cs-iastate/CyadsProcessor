@@ -1,28 +1,34 @@
+from django.db.models import Func, DateTimeField
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render
 
 # Create your views here.
-
+from processor.models import Videos, Constants
 from .BatchProcessor import BatchProcessor
 from processor.models import Batch
+from django.shortcuts import render
+from rest_framework import viewsets
+from .serializers import BatchSerializer
 from processor.exceptions import BatchNotSynced
+
 from datetime import datetime
 
 import structlog
 from structlog import get_logger
 from structlog.stdlib import LoggerFactory
+
 structlog.configure(logger_factory=LoggerFactory())
 logger = get_logger()
-from processor.models import Videos
+
 
 def view_gather_video_info_catchup(request):
     gather_video_info_catchup()
     return HttpResponse("finished gatching up videos not downloaded")
 
+
 def gather_video_info_catchup():
     video: Videos
     for video in Videos.objects.filter(checked=False, watched_as_ad__gte=0):
-
         batch_processor = BatchProcessor()
         batch_processor.save_video_metadata([video.url], is_ad=True)
         vid_db_id = Videos.objects.get(url=vid_id)
@@ -70,3 +76,18 @@ def process(request: HttpRequest, batch_id: int, force: bool = False) -> HttpRes
 def test(request, number: int):
     logger.info("test request", number=number)
     return HttpResponse(f"Server active: Got number: {number}")
+
+
+class BatchViewSet(viewsets.ModelViewSet):
+
+    def annoated_queryset():
+        return Batch.objects.filter(status=Constants.BATCH_COMPLETED).all().annotate(
+            start_datetime=Func('start_timestamp', function="FROM_UNIXTIME", output_field=DateTimeField()),
+            completed_datetime=Func(
+                'completed_timestamp',
+                function="FROM_UNIXTIME",
+                output_field=DateTimeField()),
+            )
+
+    queryset = annoated_queryset()
+    serializer_class = BatchSerializer
