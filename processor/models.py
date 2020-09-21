@@ -116,7 +116,7 @@ class Batch(models.Model):
     remarks = models.CharField(max_length=255, help_text="Used to indicated any problems with the batch data")
 
     class Meta:
-        ordering = ['-start_timestamp']
+        ordering = ['start_timestamp']
 
     @staticmethod
     def get_batch_by_status(status):

@@ -18,3 +18,4 @@ pytest
 docutils
 djangorestframework==3.11.1
 djangorestframework-datatables==0.5.2
+serpy==0.3.1

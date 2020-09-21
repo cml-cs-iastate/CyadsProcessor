@@ -1,15 +1,12 @@
 from django.db.models import Func, DateTimeField
 from django.http import HttpResponse, HttpRequest
-from django.shortcuts import render
 
 # Create your views here.
 from processor.models import Videos, Constants
 from .BatchProcessor import BatchProcessor
 from processor.models import Batch
-from django.shortcuts import render
 from rest_framework import viewsets
 from .serializers import BatchSerializer
-from processor.exceptions import BatchNotSynced
 
 from datetime import datetime
 
@@ -80,8 +77,9 @@ def test(request, number: int):
 
 class BatchViewSet(viewsets.ModelViewSet):
 
-    def annoated_queryset():
-        return Batch.objects.filter(status=Constants.BATCH_COMPLETED).all().annotate(
+    def batches_with_datetime():
+        # .filter(status=Constants.BATCH_COMPLETED)
+        return Batch.objects.select_related('location').all().annotate(
             start_datetime=Func('start_timestamp', function="FROM_UNIXTIME", output_field=DateTimeField()),
             completed_datetime=Func(
                 'completed_timestamp',
@@ -89,5 +87,5 @@ class BatchViewSet(viewsets.ModelViewSet):
                 output_field=DateTimeField()),
             )
 
-    queryset = annoated_queryset()
+    queryset = batches_with_datetime()
     serializer_class = BatchSerializer

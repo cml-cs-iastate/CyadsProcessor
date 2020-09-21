@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+<head>
+  {% block title %}Cyads -{% endblock title %}
+  <meta name="description" content="Comparison between local and Google cyads DB">
+</head>
+{% block title-vis %}DATABASE DETAILS{% endblock title-vis %}
+{% block content %}
+
+<style>
+
+  #page-title {
+  text-align: center;
+  color: #782970;
+  font-size: 32px;
+  }
+
+  #tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  width: 100%;
+}
+
+ #motherbrain-table th {
+ background: linear-gradient(to bottom, rgb(58, 58, 60) 0%, rgb(124, 37, 116) 9%, rgb(142, 69, 151) 70%, rgb(142, 69, 150) 100%);
+ }
+
+ #google-sql-table th {
+ background: linear-gradient(to bottom, rgb(46, 47, 33) 0%, rgb(157, 96, 52) 5%, rgb(187, 123, 96) 56%, rgb(187, 123, 97) 100%);
+ }
+
+
+</style>
+
+<b>Ad Views Motherbrain:</b> {{ad_views_mb}}<br>
+<b>Ad Views GCP SQL:</b> {{ad_views_gcp_copy}}<br>
+
+<div id="tables">
+  <div style="padding-right:3em">
+  <h3>Mother Brain</h3>
+    <table id="motherbrain-table" class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th>Table Name</th>
+          <th>Size in MB</th>
+          <th>Estimated Records</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for table in mb_tables_info %}
+        <tr>
+          <td>{{table.table_name}}</td>
+          <td>{{table.data_size_mb}}</td>
+          <td>{{table.rows_estimate}}</td>
+      </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  <div id="google-sql-table-info">
+      <h3>Google SQL</h3>
+        <table id="google-sql-table" class="table table-striped table-bordered" style="width:100%" data-server-side="true" data-ajax="/api/batches/?format=datatables">
+      <thead>
+        <tr>
+          <th>Table Name</th>
+          <th>Size in MB</th>
+          <th>Estimated Records</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for table in gcp_copy_tables_info %}
+        <tr>
+          <td>{{table.table_name}}</td>
+          <td>{{table.data_size_mb}}</td>
+          <td>{{table.rows_estimate}}</td>
+      </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock content %}
+

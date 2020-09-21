@@ -1,26 +1,25 @@
-from rest_framework import serializers
-from .models import Batch, Locations
+import serpy
 
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Locations
-        fields = "__all__"
+class LocationSerializer(serpy.Serializer):
+    state_name = serpy.StrField()
+    state_symbol = serpy.StrField()
 
 
-class BatchSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    location = LocationSerializer(many=False, read_only=True)
-    start_datetime = serializers.DateTimeField(read_only=True)
-    completed_datetime = serializers.DateTimeField(read_only=True)
+class BatchSerializer(serpy.Serializer):
+    id = serpy.Field()
+    location = LocationSerializer()
+    start_datetime = serpy.Field()
+    completed_datetime = serpy.Field()
 
-
-    class Meta:
-        model = Batch
-
-        fields = (
-            'id', 'start_timestamp', 'completed_timestamp', 'time_taken',
-            "total_bots", "external_ip", "status", "video_list_size",
-            'server_hostname', 'server_container', 'location', 'synced', 'processed',
-            "start_datetime", "completed_datetime",
-        )
+    start_timestamp = serpy.IntField()
+    completed_timestamp = serpy.IntField()
+    time_taken = serpy.IntField()
+    total_bots = serpy.IntField()
+    external_ip = serpy.StrField()
+    status = serpy.StrField()
+    video_list_size = serpy.IntField()
+    server_hostname = serpy.StrField()
+    server_container = serpy.StrField()
+    synced = serpy.BoolField()
+    processed = serpy.BoolField()

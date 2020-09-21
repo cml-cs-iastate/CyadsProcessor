@@ -1,19 +1,13 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %}
 <head>
-  <meta charset="utf-8">
-  <title>Cyads - Batch Completion status</title>
+  {% block title %}Cyads - Batch running status {% endblock title %}
   <meta name="description" content="Status of completed Batches">
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.css">
-  <link rel="stylesheet" href="//cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
 </head>
-
-<body>
-<h1><center>COMPLETED BATCHES</center></h1>
-
+{% block title-vis %}COMPLETED BATCHES{% endblock title-vis %}
+{% block content %}
   <div class="container">
     <div class="row">
-      <div class="col-sm-12">
+      <div class="column">
         <table id="completed-batches" class="table table-striped table-bordered" style="width:100%" data-server-side="true" data-ajax="/api/batches/?format=datatables">
           <thead>
             <tr>
@@ -37,17 +31,33 @@
     </div>
   </div>
 
-  <script src="//code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="//cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="//cdn.datatables.net/1.10.16/js/dataTables.bootstrap4.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
   <script>
   $(document).ready(function() {
     $('#completed-batches').DataTable( {
+        "processing": true,
+        "responsive": true,
         "order": [[ 2, "desc" ]],
         "iDisplayLength": 25,
         "serverSide": false,
+        "deferRender": true,
+         searchCols: [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      { "search": "COMPLETED" },
+      null,
+      null,
+      null,
+   ]
     } );
   } );
   </script>
-</body>
-</html>
+{% endblock content %}

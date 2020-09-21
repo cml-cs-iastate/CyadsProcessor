@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Cyads{% endblock title %}</title>
+</head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
+
+<body>
+{% include "header.html" %}
+<h1 id="page-title">{% block title-vis %}Cyads vis title{% endblock title-vis %}</h1>
+{% block content %} empty content{% endblock content %}
+</body>
+</html>
