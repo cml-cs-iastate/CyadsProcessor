@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_datatables'
+    'rest_framework_datatables',
 ]
 
 MIDDLEWARE = [
@@ -62,7 +62,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'CyadsProcessor.urls'
@@ -110,7 +109,7 @@ DATABASES = {
         'PASSWORD': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PASSWORD'),
         'HOST': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_HOSTNAME', '35.202.112.86'),
         'PORT': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PORT', '3306')
-    }
+    },
 }
 
 
@@ -149,8 +148,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
-
-STATIC_URL = '/static/'
 
 TEMPLATE_DIRS = (os.path.join(BASE_DIR,  'templates'),)
 
@@ -219,14 +216,6 @@ CELERY_TASK_SERIALIZER = 'json'
 
 
 DATABASE_ROUTERS = ['ad_extension_pull.router.AdExtensionRouter']
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ]
-}
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
