@@ -115,6 +115,9 @@ class Batch(models.Model):
     video_list_size = models.IntegerField(default=550, help_text="Number of videos in the video list the bots watched")
     remarks = models.CharField(max_length=255, help_text="Used to indicated any problems with the batch data")
 
+    class Meta:
+        ordering = ['start_timestamp']
+
     @staticmethod
     def get_batch_by_status(status):
         batch = Batch.objects.get(status=status)

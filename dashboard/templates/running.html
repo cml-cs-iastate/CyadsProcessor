@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+<head>
+  <meta charset="utf-8">
+  {% block title %}Cyads - Batch running status {% endblock title %}
+  <meta name="description" content="Status of completed Batches">
+</head>
+
+{% block title-vis%}RUNNING BATCHES {% endblock title-vis %}
+
+{% block content %}
+
+    <div class="row">
+      <div class="col-12 column running-details">
+        <table id="running-batches" class="display compact" style="width:100%" data-ajax="/api/batches/?format=datatables">
+          <thead>
+            <tr>
+              <th data-data="id">id</th>
+              <th data-data="start_datetime">Start Date/Time</th>
+              <th data-data="total_bots">Total bots</th>
+              <th data-data="server_hostname">Server hostname</th>
+              <th data-data="server_container">Container hostname</th>
+              <th data-data="location.state_name">Location</th>
+              <th data-data="external_ip">External IP</th>
+              <th data-data="status">Status</th>
+              <th data-data="video_list_size">List Size</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+        <div class="col-12 column running-summary">
+                    <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">By date</th>
+                    <th scope="col">Num of VMs</th>
+              </tr>
+            <thead>
+            <tbody>
+                {% for batch_day in batches_count_by_day %}
+                    <tr>
+                        <td scope="row">{{batch_day.start_day}}</td>
+                        <td scope="row">{{batch_day.count}}</td>
+                    </tr>
+                {% endfor %}
+            <tbody>
+        </table>
+GENERAL INFO
+	<table>
+        <tr>
+            <th scope="col">By date</th>
+            <th scope="col">Num of VMs</th>
+      </tr>
+		<tr>
+			<td>Number of Running VMs</td>
+			<td>{{running_batches.count}}</td>
+		</tr>
+		<tr>
+			<td>Number of Dates</td>
+			<td>{{batches_count_by_day.count}}</td>
+		</tr>
+		<tr>
+			<td>Number of States</td>
+			<td>{{running_by_location.count}}</td>
+		</tr>
+	</table>
+
+
+
+LOCATION INFO
+	<table>
+        <tr>
+            <th scope="col">By Location</th>
+            <th scope="col">Num of VMs</th>
+      </tr>
+        {% for location in running_by_location %}
+		<tr>
+			<td>{{location.location__state_name}}</td>
+			<td>{{location.count}}</td>
+		</tr>
+        {% endfor %}
+	</table>
+        </div>
+    </div>
+
+
+
+
+
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+  <script>
+  $(document).ready(function() {
+    $('#running-batches').DataTable( {
+        "processing": true,
+        "order": [[ 3, "asc" ]],
+        "iDisplayLength": 25,
+        "serverSide": true,
+        "deferRender": true,
+         searchCols: [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      { "search": "RUNNING" },
+      null,
+   ]
+    } );
+  } );
+  </script>
+
+<style>
+
+table {
+padding-bottom: 1em;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-bottom: 1em;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  flex: 1;
+  padding-right: 3em;
+}
+
+.running-details {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  flex: 2;
+}
+</style>
+{% endblock content %}

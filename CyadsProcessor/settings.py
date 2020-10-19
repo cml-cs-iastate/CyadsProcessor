@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_datatables',
 ]
 
 MIDDLEWARE = [
@@ -107,7 +109,7 @@ DATABASES = {
         'PASSWORD': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PASSWORD'),
         'HOST': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_HOSTNAME', '35.202.112.86'),
         'PORT': os.getenv('GOOGLE_CYADS_PROCESSOR_DB_PORT', '3306')
-    }
+    },
 }
 
 
@@ -146,8 +148,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
-
-STATIC_URL = '/static/'
 
 TEMPLATE_DIRS = (os.path.join(BASE_DIR,  'templates'),)
 
@@ -216,3 +216,21 @@ CELERY_TASK_SERIALIZER = 'json'
 
 
 DATABASE_ROUTERS = ['ad_extension_pull.router.AdExtensionRouter']
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework_datatables.renderers.DatatablesRenderer',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_datatables.filters.DatatablesFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework_datatables.pagination.DatatablesPageNumberPagination',
+    'PAGE_SIZE': 100,
+}

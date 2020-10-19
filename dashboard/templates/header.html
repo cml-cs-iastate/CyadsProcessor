@@ -1,0 +1,109 @@
+<style>
+	table tr:nth-child(even):hover {background-color: #dddddd;}
+	table tr:nth-child(odd):hover {background-color: #dddddd;}
+
+
+	th {
+		padding-top: 12px;
+		padding-bottom: 12px;
+		text-align: left;
+        background: linear-gradient(to bottom, rgb(24, 24, 24) 0%, rgb(89, 89, 88) 34%, rgb(111, 111, 111) 100%);
+		color: white;
+	}
+	table td, table tr {
+	padding: 4px;
+	border: 1px solid #DDD;
+	}
+
+    table tr:nth-child(even){background-color: #f2f2f2;}
+
+    table {
+        border-collapse: collapse;
+    }
+
+
+	#button-1 {
+	font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+	background: linear-gradient(to bottom, rgb(62, 61, 59) 0%, rgb(32, 149, 70) 7%, rgb(77, 188, 93) 47%, rgb(76, 188, 90) 100%);
+	border: none;
+	color: white;
+	padding: 15px 32px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	font-size: 16px;
+	}
+	#button-1:hover {background-color: #6CCF70;}
+	#button-2{
+		font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+		background: linear-gradient(to bottom, rgb(35, 36, 38) 0%, rgb(4, 93, 137) 7%, rgb(53, 158, 181) 47%, rgb(54, 159, 181) 100%);
+		border: none;
+		color: white;
+		padding: 15px 32px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+	}
+	#button-2:hover {background-color: #20ACDA;}
+	#button-3{
+		font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+		background: linear-gradient(to bottom, rgb(58, 58, 60) 0%, rgb(124, 37, 116) 9%, rgb(142, 69, 151) 65%, rgb(142, 69, 151) 100%);
+		border: none;
+		color: white;
+		padding: 15px 32px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+	}
+	#button-3:hover {background-color: #9797CF;}
+	#button-4{
+		font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+		background: linear-gradient(to bottom, rgb(46, 47, 33) 0%, rgb(157, 96, 52) 5%, rgb(187, 123, 96) 56%, rgb(187, 123, 97) 100%);
+		border: none;
+		color: white;
+		padding: 15px 32px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+	}
+	#button-4:hover {background-color: #FF9534;}
+
+
+    #title-vis {
+        text-align: center;
+        }
+
+    #site-header {
+        background-color: #555;
+        text-align: center;
+    }
+
+	#page-title {
+	    text-align: center;
+	    font-size: 16px;
+	}
+
+	#running-batches th {
+        background: linear-gradient(to bottom, rgb(62, 61, 59) 0%, rgb(32, 149, 70) 7%, rgb(77, 188, 93) 47%, rgb(76, 188, 90) 100%);
+	}
+
+	#completed-batches th {
+		background: linear-gradient(to bottom, rgb(35, 36, 38) 0%, rgb(4, 93, 137) 7%, rgb(53, 158, 181) 47%, rgb(54, 159, 181) 100%);
+	}
+
+
+
+</style>
+
+
+<header id="site-header">
+<div id="title-vis" style=text-align:center;padding:10px><h1 style=color:#888> CyAds Bots Monitoring Dashboard</h1></div>
+    <nav>
+        <a href=running.html id="button-1">Running batches</a>
+        <a href=completed.html id="button-2">Completed batches</a>
+        <a href=database_mb.html id="button-3">MB -> GCP Database details</a>
+    </nav>
+</header>

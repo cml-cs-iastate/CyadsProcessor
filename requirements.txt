@@ -16,3 +16,6 @@ git+git://github.com/cml-cs-iastate/video_metadata
 structlog==20.1.0
 pytest
 docutils
+djangorestframework==3.11.1
+djangorestframework-datatables==0.5.2
+serpy==0.3.1

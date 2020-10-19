@@ -14,8 +14,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 import os
+
+from django.conf.urls import url
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework import routers
+from processor import views as processor_views
 
 from messaging.subscribers.batch_subscriber import BatchSubscriber
 from downloader.download import DownloadProcessor
@@ -23,6 +27,11 @@ import downloader
 from downloader import views
 from processor.views import process, process_all, test
 from ad_extension_pull.views import view_process_videos_collected_from_extension
+
+router = routers.DefaultRouter()
+# Register BatchViewSet to for prefix /api/batches/ to handle all API requests about batches
+router.register(r'batches', processor_views.BatchViewSet)
+
 
 urlpatterns = [
     path('', include('dashboard.urls')),
@@ -33,8 +42,8 @@ urlpatterns = [
     path("process_all/", process_all, name="process_all"),
     path("test/<int:number>/", test, name="test"),
     path("ad_extension_process_videos", view_process_videos_collected_from_extension, name="ad_extension_video_process"),
+    url('^api/', include(router.urls)),
 ]
-
 
 subscriber = BatchSubscriber(os.getenv("GOOGLE_PROJECT_ID"),
                                      os.getenv("GOOGLE_TOPIC"),
