@@ -74,8 +74,8 @@ class Command(BaseCommand):
             destination_video.check_status = check_status
             destination_video.description = description
             destination_video.AdFile_ID = adfile_id
-            destination_video.watched_as_video = watched_as_video
-            destination_video.watched_as_ad = watched_as_ad
+            destination_video.watched_as_video = True if watched_as_video >= 1 else False
+            destination_video.watched_as_ad = True if watched_as_ad >= 1 else False
             destination_video.keywords = keywords
             destination_video.title = title
             print(f"updated video: Video: id={destination_video.id}, url={destination_video.url}")
