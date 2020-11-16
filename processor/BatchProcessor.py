@@ -307,10 +307,14 @@ class BatchProcessor:
         return loc
 
     def process_new_batch(self, batch: Batch):
+
+        # Reconstruct directory path where unprocessed ad collection data is stored from Batch table in DB
         dump_path = DumpPath.from_batch(base_path=Path(self.dump_path), batch=batch)
         if not dump_path.to_path().is_dir():
             self.logger.info('No such dump path found ')
             raise RuntimeError('No such dump path found for processing: ', dump_path.to_path().as_posix())
+
+        # Determine which format of ad collection info we are attempting to process
         ad_format_version: int = self.determine_ad_format_version(dump_path)
         self.logger.info("batch info", dir=dump_path.to_path().as_posix(), ad_format_v=ad_format_version)
         try:
@@ -333,6 +337,13 @@ class BatchProcessor:
                 self.save_watchlog_information_v3(dump_path, batch)
             else:
                 self.logger.error("Unsupported ad format version:", ad_format_version)
+                remarks = {}
+                remarks["event"] = "unsupported_ad_format_version"
+                remarks["event_type"] = "missing"
+                remarks["ad_format_version"] = ad_format_version
+
+                batch.remarks = json.dumps(remarks)
+
         except WatchLogAdExtractionException as wl_errors:
             remarks = {}
             remarks["event"] = "no ad data inside some files"
