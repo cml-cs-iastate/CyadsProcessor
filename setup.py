@@ -2,7 +2,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="CyadsProcessor",
-    version="1.32.0",
+    version="1.40.1",
     description="CyadsProcessor",
     url="https://github.com/cml-cs-iastate/CyadsProcessor",
     license="MIT",

@@ -25,3 +25,11 @@ class AdExtensionRouter:
             return False  # we're not using syncdb on our legacy database
         else:  # but all other models/databases are fine
             return True
+
+    def allow_migrate(self, db, app_label, model=None, **hints):
+        """
+        Allows migration for default DB.
+        We want to ignore any databases that CyadsProcessor doesn't intend to create itself.
+        We want to ignore the one hosted on GCP.
+        """
+        return db == 'default'
