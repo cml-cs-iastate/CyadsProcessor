@@ -31,15 +31,16 @@ class BatchCompletionStatus(Enum):
 
 class BotEvents(str, Enum):
     """Types of events that a bot spawner can send"""
+    # A batch has started
     BATCH_STARTED = "batch_started"
+    # A batch has completed
     BATCH_COMPLETED = "batch_completed"
+    # A batch's data has been synced, and is ready for processing
     BATCH_SYNCED = "batch_synced"
     # Process all unprocessed batches which are synced
     PROCESS = "process"
     # Test event
     TEST = "test"
-    # Process data in unprocessed directory
-    PROCESS_UNPROCESSED = "process_unprocessed"
 
 
 class BatchStarted:
