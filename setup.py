@@ -18,7 +18,7 @@ setup(
         "python-dateutil>=2.8.1",
         "google-api-python-client>=1.12.5",
         "requests>=2.25.0",
-        "youtube-dl>=2020.11.21.1",
+        "youtube-dl>=2020.11.29",
         "beautifulsoup4>=4.9.1",
         "tenacity>=6.2.0",
         "lxml>=4.5.1",
