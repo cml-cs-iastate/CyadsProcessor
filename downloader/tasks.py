@@ -123,7 +123,7 @@ def video_download(url: str, download_dir: str) -> Path:
         # So 360p video may have the highest audio
         # 'format': 'best',
         # 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=webm]+bestaudio[ext=webm]/best',
-        'format': 'bestvideo+bestaudio/best',
+        #'format': 'bestvideo+bestaudio/best',
         'nooverwrites': True,
         # 'continuedl': True,
         'progress_hooks': [my_hook],
