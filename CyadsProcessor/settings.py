@@ -9,6 +9,16 @@ https://docs.djangoproject.com/en/2.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
+
+import sentry_sdk
+from sentry_sdk.integrations.django import \
+    DjangoIntegration
+
+sentry_sdk.init(
+    "https://48191e5cefcf429684d6b48f18749aae@o296293.ingest.sentry.io/5169399",
+    integrations=[DjangoIntegration()]
+)
+
 import datetime
 import os
 

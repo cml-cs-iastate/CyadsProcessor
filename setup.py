@@ -28,6 +28,8 @@ setup(
         "video_metadata @ git+https://github.com/cml-cs-iastate/video_metadata",
         "structlog==20.1.0",
         "docutils",
+        "serpy>=0.3",
+        "sentry==0.20.1",
     ],
     packages=find_namespace_packages(),
 )

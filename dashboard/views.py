@@ -1,12 +1,11 @@
 import datetime
 from collections import namedtuple
 
-from django.db import connection, connections
 from django.db.models import Sum, Count, Func, DateTimeField, Count
 from django.db.models.functions import TruncDate
 from django.shortcuts import render
 
-from processor.models import Batch, Constants, Ad_Found_WatchLog
+from processor.models import Batch, Constants, Ad_Found_WatchLog, Videos, AdFile
 
 
 def index(request):
@@ -38,24 +37,29 @@ def namedtuplefetchall(cursor):
     nt_result = namedtuple('Result', [col[0] for col in desc])
     return [nt_result(*row) for row in cursor.fetchall()]
 
+from dataclasses import dataclass
+
+@dataclass
+class TableInfo:
+    table_name: str
+    record_count: int
+
 
 def database_mb_view(request):
+    # Gather record counts of important columns in the DB
+    motherbrain_tables: [TableInfo] = [
+        TableInfo(Ad_Found_WatchLog._meta.db_table, Ad_Found_WatchLog.objects.all().count()),
+        TableInfo(Videos._meta.db_table, Videos.objects.all().count()),
+        TableInfo(AdFile._meta.db_table, AdFile.objects.all().count()),
+    ]
 
-    ad_views_motherbrain = Ad_Found_WatchLog.objects.all().count()
-    ad_views_gcp_copy = Ad_Found_WatchLog.objects.using('ad_extension').all().count()
-
-    query = "SELECT table_name AS table_name, round(((data_length + index_length) / 1024 / 1024), 2) AS data_size_mb , TABLE_ROWS as rows_estimate FROM information_schema.TABLES WHERE table_schema = 'cyads_processor' order by table_schema asc;"
-    with connections['default'].cursor() as cursor:
-        cursor.execute(query)
-        motherbrain_table_info = namedtuplefetchall(cursor)
-
-    with connections['ad_extension'].cursor() as cursor:
-        cursor.execute(query)
-        gcp_copy_table_info = namedtuplefetchall(cursor)
+    gcp_tables: [TableInfo] = [
+        TableInfo(Ad_Found_WatchLog._meta.db_table, Ad_Found_WatchLog.objects.using('ad_extension').all().count()),
+        TableInfo(Videos._meta.db_table, Videos.objects.using('ad_extension').all().count()),
+        TableInfo(AdFile._meta.db_table, AdFile.objects.using('ad_extension').all().count()),
+    ]
 
     return render(request, 'database_mb.html', {
-        "mb_tables_info": motherbrain_table_info,
-        "gcp_copy_tables_info": gcp_copy_table_info,
-        "ad_views_mb": ad_views_motherbrain,
-        "ad_views_gcp_copy": ad_views_gcp_copy,
+        "mb_tables_info": motherbrain_tables,
+        "gcp_copy_tables_info": gcp_tables,
     })

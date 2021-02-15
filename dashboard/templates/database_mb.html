@@ -3,7 +3,7 @@
   {% block title %}Cyads -{% endblock title %}
   <meta name="description" content="Comparison between local and Google cyads DB">
 </head>
-{% block title-vis %}DATABASE DETAILS{% endblock title-vis %}
+{% block title-vis %}DATABASE METRICS{% endblock title-vis %}
 {% block content %}
 
 <style>
@@ -31,9 +31,6 @@
 
 </style>
 
-<b>processor_ad_found_watchlog # Records (cyads.misc.iastate.edu):</b> {{ad_views_mb}}<br>
-<b>processor_ad_found_watchlog # (Records GCP SQL cyads-db):</b> {{ad_views_gcp_copy}}<br>
-
 <div id="tables">
   <div style="padding-right:3em">
   <h3>Mother Brain</h3>
@@ -41,16 +38,14 @@
       <thead>
         <tr>
           <th>Table Name</th>
-          <th>Size in MB</th>
-          <th>Estimated Records</th>
+          <th>Number of Records</th>
         </tr>
       </thead>
       <tbody>
       {% for table in mb_tables_info %}
         <tr>
           <td>{{table.table_name}}</td>
-          <td>{{table.data_size_mb}}</td>
-          <td>{{table.rows_estimate}}</td>
+          <td>{{table.record_count}}</td>
       </tr>
         {% endfor %}
       </tbody>
@@ -62,16 +57,14 @@
       <thead>
         <tr>
           <th>Table Name</th>
-          <th>Size in MB</th>
-          <th>Estimated Records</th>
+          <th>Number of Records</th>
         </tr>
       </thead>
       <tbody>
       {% for table in gcp_copy_tables_info %}
         <tr>
           <td>{{table.table_name}}</td>
-          <td>{{table.data_size_mb}}</td>
-          <td>{{table.rows_estimate}}</td>
+          <td>{{table.record_count}}</td>
       </tr>
         {% endfor %}
       </tbody>
