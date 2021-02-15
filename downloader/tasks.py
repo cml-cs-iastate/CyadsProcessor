@@ -117,15 +117,12 @@ def video_download(url: str, download_dir: str) -> Path:
     mylogger = MyLogger()
 
     ydl_opts = {
-        # Pick best audio and video format and combine them OR pick the file with the best combination
-        # Need to capture filename of merged ffmpeg file
-        # Best doesn't return the highest video, only the highest pair.
-        # So 360p video may have the highest audio
-        # 'format': 'best',
-        # 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=webm]+bestaudio[ext=webm]/best',
-        #'format': 'bestvideo+bestaudio/best',
+        # Only download mp4 Videos
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+        'merge_output_format': 'mp4',
         'nooverwrites': True,
         # 'continuedl': True,
+        # Need to capture filename of merged ffmpeg file
         'progress_hooks': [my_hook],
         'logger': mylogger,
     }
