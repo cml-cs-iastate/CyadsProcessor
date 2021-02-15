@@ -75,6 +75,10 @@ def test(request, number: int):
     return HttpResponse(f"Server active: Got number: {number}")
 
 
+def test_error(request, err_msg: str):
+    raise Exception(f"test error reporting - msg: {err_msg}")
+
+
 class BatchViewSet(viewsets.ModelViewSet):
 
     def batches_with_datetime():

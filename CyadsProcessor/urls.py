@@ -22,10 +22,7 @@ from rest_framework import routers
 from processor import views as processor_views
 
 from messaging.subscribers.batch_subscriber import BatchSubscriber
-from downloader.download import DownloadProcessor
-import downloader
-from downloader import views
-from processor.views import process, process_all, test
+from processor.views import process, process_all, test, test_error
 from ad_extension_pull.views import view_process_videos_collected_from_extension
 
 router = routers.DefaultRouter()
@@ -41,6 +38,7 @@ urlpatterns = [
     path("batch/<int:batch_id>/reprocess/", process, kwargs={'force': True}, name="reprocess"),
     path("process_all/", process_all, name="process_all"),
     path("test/<int:number>/", test, name="test"),
+    path("test/error/<str:err_msg>", test_error, name="test_error"),
     path("ad_extension_process_videos", view_process_videos_collected_from_extension, name="ad_extension_video_process"),
     url('^api/', include(router.urls)),
 ]
