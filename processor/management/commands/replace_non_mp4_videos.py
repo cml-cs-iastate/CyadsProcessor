@@ -26,6 +26,11 @@ class Command(BaseCommand):
         non_mp4_entries = get_non_mp4_ad_entries()
         for non_mp4_entry in non_mp4_entries:
             try:
+                sentry_sdk.set_context('django_management_command', {
+                    'command': 'replace non-mp4 videos',
+                    'existing_filepath': non_mp4_entry.ad_filepath,
+                    'adfile_id': non_mp4_entry.id,
+                })
                 # 1. Download new video
                 print("old adFile")
                 print(non_mp4_entry)
