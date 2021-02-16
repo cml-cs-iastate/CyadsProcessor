@@ -29,7 +29,7 @@ setup(
         "structlog==20.1.0",
         "docutils",
         "serpy>=0.3",
-        "sentry==0.20.1",
+        "sentry==0.20.2",
     ],
     packages=find_namespace_packages(),
 )
