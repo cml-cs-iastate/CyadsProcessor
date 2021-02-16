@@ -163,14 +163,30 @@ def video_download(url: str, download_dir: str) -> Path:
         return saved_ad_filepath
 
 
-def record_download_video(url: str, base_download_dir: str) -> Videos:
-    """Download and record the video given by `url` Must be in db already"""
+def video_download_with_collection(url: str, base_download_dir: str, collection_type: CollectionType) -> Path:
+    if collection_type == CollectionType.CYADS:
+        collection_dir = "CyAds"
+    elif collection_type == CollectionType.GOOGLETREPORT:
+        collection_dir = "GoogleTReport"
+    else:
+        raise ValueError(f"Unknown CollectionType: {collection_type}")
+
+    specific_collection_dir = Path(base_download_dir).joinpath(collection_dir)
+
+    ad_filepath = video_download(url, specific_collection_dir.as_posix())
+    if ad_filepath is None:
+        raise DuplicateVideoError(f"Video already been downloaded", url=url)
+    else:
+        return ad_filepath.relative_to(base_download_dir)
+
+
+def record_download_video(url: str, base_download_dir: str, collection_type: str = CollectionType.CYADS) -> Videos:
+    """Download and record the video given by `url` Videos entry must be in db already"""
     vid = Videos.objects.get(url=url)
 
-    collection_type = CollectionType.CYADS.value
-    if collection_type == CollectionType.CYADS.value:
+    if collection_type == CollectionType.CYADS:
         collection_dir = "CyAds"
-    elif collection_type == CollectionType.GOOGLETREPORT.value:
+    elif collection_type == CollectionType.GOOGLETREPORT:
         collection_dir = "GoogleTReport"
     else:
         raise ValueError(f"Unknown CollectionType: {collection_type}")

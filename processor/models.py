@@ -256,7 +256,7 @@ class CheckStatus(Enum):
     LIVE_STREAM_REMOVED = "LIVE_STREAM_REMOVED"
 
 
-class CollectionType(Enum):
+class CollectionType(models.TextChoices):
     CYADS = "CyAds"
     GOOGLETREPORT = "GoogleTReport"
 
@@ -265,13 +265,16 @@ class AdFile(models.Model):
     """Stores data about where a downloaded video is located in storage"""
     id = models.AutoField(db_column="AdFile_ID", primary_key=True)
     ad_filepath = models.TextField(null=True, help_text="Relative filepath where downloaded video file is stored")
-    collection_type = models.CharField(max_length=64, choices=[(tag, tag.value) for tag in CollectionType],
+    collection_type = models.CharField(max_length=64, choices=CollectionType.choices,
                                        help_text="Which :py:class:`Collection` the video file is part of")
 
     def __repr__(self):
         return (f'{self.__class__.__name__}('
-                f' {self.id!r}, {self.ad_filepath!r},'
-                f' {self.collection_type!r})')
+                f'ad_id={self.id!r}, ad_filepath={self.ad_filepath!r},'
+                f'collection_type={self.collection_type!r})')
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class VideoManager(models.Manager):
